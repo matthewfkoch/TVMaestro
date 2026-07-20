@@ -1,0 +1,18 @@
+services:
+  tvmaestro:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: tvmaestro:latest
+    container_name: tvmaestro
+    ports:
+      - "6790:6790"
+    volumes:
+      - ./data:/data
+      # Share host adb keys so container can power devices over network debugging
+      - ${HOME}/.android:/root/.android:ro
+    environment:
+      - TVMAESTRO_PORT=6790
+      - TVMAESTRO_DATA_DIR=/data
+      - TVMAESTRO_LOG_LEVEL=INFO
+    restart: unless-stopped

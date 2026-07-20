@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TVMaestro</string>
+    <string name="waiting">Waiting for session from TVMaestro server…</string>
+    <string name="settings">Settings</string>
+    <string name="port_label">Control API port</string>
+    <string name="token_label">API token (optional)</string>
+    <string name="server_url_label">TVMaestro server URL (for Wake/Sleep)</string>
+    <string name="server_url_hint">http://192.168.1.10:6790</string>
+    <string name="test_wake">Test wake</string>
+    <string name="test_sleep">Test sleep</string>
+    <string name="test_cec">Test volume up</string>
+    <string name="save">Save</string>
+    <string name="cec_report">CEC capabilities</string>
+</resources>
