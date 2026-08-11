@@ -45,6 +45,11 @@ TVMAESTRO_DATA_DIR=../data uvicorn tvmaestro.main:app --host 0.0.0.0 --port 6790
 
 Or use `scripts/dev-server.sh` after creating `server/.venv`.
 
+```bash
+pip install -r requirements-dev.txt   # includes pytest
+pytest -q
+```
+
 ### Web UI
 
 ```bash

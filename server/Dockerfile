@@ -21,6 +21,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY server/requirements.txt .
+# Runtime deps only (pinned); pytest lives in requirements-dev.txt for CI/local.
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server/tvmaestro ./tvmaestro
