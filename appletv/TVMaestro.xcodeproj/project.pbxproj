@@ -16,6 +16,9 @@
 		331252BCA8584220A7A13828 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31252BCA8584220A7A13828 /* ContentView.swift */; };
 		727D49460AA34EABA9A1754A /* PlayerGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A27D49460AA34EABA9A1754A /* PlayerGridView.swift */; };
 		9105B19D34F94B059B9942A7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A105B19D34F94B059B9942A7 /* SettingsView.swift */; };
+		B1A11E4E01A2B3C4D5E6F701 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A11E4E01A2B3C4D5E6F701 /* Theme.swift */; };
+		B1A22D10A1A2B3C4D5E6F702 /* AudioController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A22D10A1A2B3C4D5E6F702 /* AudioController.swift */; };
+		B1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift */; };
 		3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -30,6 +33,9 @@
 		A31252BCA8584220A7A13828 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A27D49460AA34EABA9A1754A /* PlayerGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerGridView.swift; sourceTree = "<group>"; };
 		A105B19D34F94B059B9942A7 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1A11E4E01A2B3C4D5E6F701 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		A1A22D10A1A2B3C4D5E6F702 /* AudioController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioController.swift; sourceTree = "<group>"; };
+		A1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamURL.swift; sourceTree = "<group>"; };
 		A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A52231E8CF9744FCD8DB28280 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -58,6 +64,9 @@
 			children = (
 				A4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift */,
 				A7595C8FC2474CAF91247F8B /* AppModel.swift */,
+				A1A11E4E01A2B3C4D5E6F701 /* Theme.swift */,
+				A1A22D10A1A2B3C4D5E6F702 /* AudioController.swift */,
+				A1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift */,
 				A80D4FB721344656845DACED /* SessionModels.swift */,
 				A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */,
 				A8A25408A65C482588B3A7D9 /* ControlServer.swift */,
@@ -145,6 +154,9 @@
 			files = (
 				C4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift in Sources */,
 				97595C8FC2474CAF91247F8B /* AppModel.swift in Sources */,
+				B1A11E4E01A2B3C4D5E6F701 /* Theme.swift in Sources */,
+				B1A22D10A1A2B3C4D5E6F702 /* AudioController.swift in Sources */,
+				B1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift in Sources */,
 				E80D4FB721344656845DACED /* SessionModels.swift in Sources */,
 				98E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift in Sources */,
 				D8A25408A65C482588B3A7D9 /* ControlServer.swift in Sources */,
@@ -208,7 +220,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tvmaestro.client;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
@@ -234,7 +246,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tvmaestro.client;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;

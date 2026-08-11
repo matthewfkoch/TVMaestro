@@ -62,19 +62,39 @@ Vite proxies `/api` to `http://127.0.0.1:6790`.
 
 To serve the built UI from the Python server (non-Docker), run `scripts/build-web.sh` — it builds `web/` and copies assets into `server/tvmaestro/web/`.
 
+## Build automation
+
+One entry point locally:
+
+```bash
+scripts/build-all.sh
+# or: scripts/build-all.sh --skip-docker --only server,web
+```
+
+| Script | What it does |
+|--------|----------------|
+| `scripts/build-all.sh` | Server tests, web, Docker image, Android APK, Apple TV (skips missing toolchains) |
+| `scripts/build-web.sh` | Vite production build → `server/tvmaestro/web/` |
+| `scripts/build-android.sh` | `assembleDebug` APK |
+| `scripts/build-appletv.sh` | tvOS Simulator build (needs full Xcode) |
+
+**CI** (`.github/workflows/ci.yml`) runs on every push/PR: pytest, web build, Docker image, Android debug APK, and Apple TV simulator build (macOS runner). Artifacts: `web-dist`, `android-debug-apk`, `appletv-simulator-app`.
+
 ### Apple TV client
 
-Open `appletv/TVMaestro.xcodeproj` in Xcode, run on an Apple TV (tvOS 17+), then **+ Device** with the Apple TV LAN IP and port `9093`. Prefer **HLS** URLs from Channels DVR — see `appletv/README.md`.
+Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** with the LAN IP and port `9093`. Prefer **HLS** from Channels DVR. Leave the app open for the control API. Details: `appletv/README.md`.
 
 ### Android client
 
-Open `android/` in Android Studio, build & install on a TV/box, then in the web UI **+ Device** with the device LAN IP and port `9093`.
-
 ```bash
-cd android
-./gradlew :app:assembleDebug
+# Automated
+scripts/build-android.sh
+# or
+cd android && ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+Open `android/` in Android Studio if you prefer the IDE. Then in the web UI **+ Device** with the device LAN IP and port `9093`.
 
 Multiview max depends on the SoC: capable devices report up to 4 panes; many Amlogic/MediaTek sticks are clamped to 1.
 

@@ -10,6 +10,7 @@ struct TVMaestroApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appModel)
+                .preferredColorScheme(.dark)
                 .onAppear { appModel.start() }
                 .onDisappear { appModel.stop() }
         }

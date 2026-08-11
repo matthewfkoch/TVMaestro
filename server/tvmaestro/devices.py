@@ -79,9 +79,14 @@ class DeviceRegistry:
             if not isinstance(cec_raw, dict):
                 cec_raw = {}
             # Wake/Sleep: Android TV Remote (paired) or adb; client HDMI often blocked.
+            # Apple TV / tvOS has no adb or ATV-remote path — trust the client's cec.power flag.
+            platform = str(info.get("platform") or caps_raw.get("platform") or "").lower()
+            is_apple_tv = platform in ("tvos", "appletv") or str(
+                caps_raw.get("chip_family") or info.get("chip_family") or ""
+            ).lower() in ("apple", "appletv")
             client_power = bool(cec_raw.get("power", False))
-            remote_paired = androidtv_remote.has_certs(device_id)
-            adb_power = _adb_available()
+            remote_paired = False if is_apple_tv else androidtv_remote.has_certs(device_id)
+            adb_power = False if is_apple_tv else _adb_available()
             if remote_paired:
                 method = "androidtv_remote"
             elif client_power:

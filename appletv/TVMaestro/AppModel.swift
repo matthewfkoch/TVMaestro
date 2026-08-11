@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import UIKit
 
-/// Shared app state: prefs, control server, and the active playback session.
+/// Shared app state: prefs, control server, playback session, and chrome.
 @MainActor
 final class AppModel: ObservableObject {
     @Published var session: PlaybackSession?
@@ -11,13 +11,28 @@ final class AppModel: ObservableObject {
     @Published var port: Int
     @Published var authToken: String
     @Published var lastError: String?
+    @Published var streamWarning: String?
+    @Published var volumeHUD: String?
+    @Published var chromeVisible = true
 
     private var server: ControlServer?
+    private var volumeListener: UUID?
+    private var hudHideTask: Task<Void, Never>?
+    private var chromeHideTask: Task<Void, Never>?
     private let defaults = UserDefaults.standard
 
     private enum Keys {
         static let port = "controlPort"
         static let token = "authToken"
+    }
+
+    var isPlaying: Bool {
+        session?.slots.contains(where: \.isPlayable) == true
+    }
+
+    var focusTitle: String? {
+        session?.slots.first(where: { $0.audio && $0.isPlayable })?.title
+            ?? session?.slots.first(where: \.isPlayable)?.title
     }
 
     init() {
@@ -27,46 +42,114 @@ final class AppModel: ObservableObject {
     }
 
     func start() {
-        localAddresses = LocalIP.ipv4Addresses()
+        AudioController.configureAudioSession()
+        refreshAddresses()
         restartServer()
+        volumeListener = AudioController.shared.addListener { [weak self] in
+            Task { @MainActor in
+                self?.showVolumeHUD()
+            }
+        }
     }
 
     func stop() {
+        if let volumeListener {
+            AudioController.shared.removeListener(volumeListener)
+        }
+        volumeListener = nil
         server?.stop()
         server = nil
+        UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    func refreshAddresses() {
+        localAddresses = LocalIP.ipv4Addresses()
+        if !isPlaying {
+            statusLine = idleStatus()
+        }
     }
 
     func saveSettings(port: Int, token: String) {
         self.port = max(1024, min(port, 65535))
-        authToken = token
+        authToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
         defaults.set(self.port, forKey: Keys.port)
         defaults.set(authToken, forKey: Keys.token)
         restartServer()
     }
 
-    func applySession(_ session: PlaybackSession?) {
+    func applySession(_ session: PlaybackSession?, warning: String? = nil) {
         self.session = session
-        if let session, !session.slots.isEmpty {
-            statusLine = "Playing \(session.slots.count) stream(s) · \(session.layout)"
+        streamWarning = warning
+        UIApplication.shared.isIdleTimerDisabled = session?.slots.contains(where: \.isPlayable) == true
+
+        if let session, session.slots.contains(where: \.isPlayable) {
+            let playable = session.slots.filter(\.isPlayable).count
+            statusLine = "Playing \(playable) · \(session.layout)"
             lastError = nil
+            flashChrome()
         } else {
             statusLine = idleStatus()
+            chromeVisible = true
         }
+    }
+
+    func stopPlayback() {
+        server?.clearSessionLocally()
+        applySession(nil)
     }
 
     func reportPlaybackError(_ message: String) {
         lastError = message
         statusLine = message
+        flashChrome()
+    }
+
+    func testVolumeUp() {
+        _ = AudioController.shared.volumeUp()
+    }
+
+    func flashChrome() {
+        chromeVisible = true
+        chromeHideTask?.cancel()
+        guard isPlaying else { return }
+        chromeHideTask = Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            if !Task.isCancelled {
+                chromeVisible = false
+            }
+        }
+    }
+
+    private func showVolumeHUD() {
+        let audio = AudioController.shared
+        if audio.isMuted {
+            volumeHUD = "Muted"
+        } else {
+            let pct = Int((audio.gain * 100).rounded())
+            volumeHUD = "Volume \(pct)%"
+        }
+        flashChrome()
+        hudHideTask?.cancel()
+        hudHideTask = Task {
+            try? await Task.sleep(nanoseconds: 1_800_000_000)
+            if !Task.isCancelled {
+                volumeHUD = nil
+            }
+        }
     }
 
     private func restartServer() {
         server?.stop()
-        let control = ControlServer(port: UInt16(port), authToken: authToken) { [weak self] event in
+        let control = ControlServer(
+            port: UInt16(port),
+            authToken: authToken,
+            audio: AudioController.shared
+        ) { [weak self] event in
             Task { @MainActor in
                 guard let self else { return }
                 switch event {
-                case .session(let s):
-                    self.applySession(s)
+                case .session(let s, let warning):
+                    self.applySession(s, warning: warning)
                 case .stopped:
                     self.applySession(nil)
                 case .failed(let message):
@@ -78,7 +161,9 @@ final class AppModel: ObservableObject {
         server = control
         do {
             try control.start()
-            statusLine = idleStatus()
+            if !isPlaying {
+                statusLine = idleStatus()
+            }
             lastError = nil
         } catch {
             statusLine = "Control API failed: \(error.localizedDescription)"
@@ -89,6 +174,6 @@ final class AppModel: ObservableObject {
     private func idleStatus() -> String {
         let hosts = localAddresses.isEmpty ? ["<no LAN IP>"] : localAddresses
         let list = hosts.map { "\($0):\(port)" }.joined(separator: ", ")
-        return "Control API on \(list). Waiting for TVMaestro…"
+        return "Control API on \(list)"
     }
 }

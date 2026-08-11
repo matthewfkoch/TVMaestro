@@ -25,6 +25,7 @@ android/.gradle/
 android/app/build/
 android/build/
 android/.cxx/
+appletv/build/
 *.iml
 .idea/
 .DS_Store

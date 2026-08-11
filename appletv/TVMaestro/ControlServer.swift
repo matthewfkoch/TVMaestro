@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 enum ControlEvent {
-    case session(PlaybackSession)
+    case session(PlaybackSession, warning: String?)
     case stopped
     case failed(String)
 }
@@ -11,17 +11,25 @@ enum ControlEvent {
 final class ControlServer {
     private let port: UInt16
     private let authToken: String
+    private let audio: AudioController
     private let onEvent: (ControlEvent) -> Void
     private var http: TinyHTTPServer?
     private let lock = NSLock()
     private var current: PlaybackSession?
 
-    /// Apple TV typically handles several AVPlayers; MPEG-TS is unreliable on AVPlayer.
     static let multiviewMax = 4
+    static let versionName =
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.2.0"
 
-    init(port: UInt16, authToken: String, onEvent: @escaping (ControlEvent) -> Void) {
+    init(
+        port: UInt16,
+        authToken: String,
+        audio: AudioController,
+        onEvent: @escaping (ControlEvent) -> Void
+    ) {
         self.port = port
         self.authToken = authToken
+        self.audio = audio
         self.onEvent = onEvent
     }
 
@@ -39,6 +47,13 @@ final class ControlServer {
     func stop() {
         http?.stop()
         http = nil
+    }
+
+    /// Clears the in-memory session from the UI (Menu remote) without requiring a LAN round-trip.
+    func clearSessionLocally() {
+        lock.lock()
+        current = nil
+        lock.unlock()
     }
 
     private func handle(method: String, path: String, headers: [String: String], body: Data) -> (Int, Data, String) {
@@ -78,7 +93,7 @@ final class ControlServer {
             "manufacturer": "Apple",
             "androidVersion": device.systemVersion,
             "sdkInt": 0,
-            "versionName": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0",
+            "versionName": Self.versionName,
             "port": Int(port),
             "hardware": "appletv",
             "board": "appletv",
@@ -92,14 +107,9 @@ final class ControlServer {
                 "hls": true,
                 "weak_decoder": false,
                 "chip_family": "apple",
-                "chip_note": "Prefer HLS from Channels DVR; raw MPEG-TS is unreliable on AVPlayer",
-                "cec": [
-                    "power": false,
-                    "volume": true,
-                    "mute": true,
-                    "method": "avaudio",
-                    "power_detail": "tvOS cannot wake/sleep the TV via this client; use the Siri Remote or HDMI-CEC in Apple TV settings",
-                ],
+                "platform": "tvos",
+                "chip_note": "Prefer HLS from Channels DVR; MPEG-TS is rewritten toward format=hls when possible",
+                "cec": audio.capabilities(),
             ],
         ]
     }
@@ -116,9 +126,24 @@ final class ControlServer {
 
     private func setSession(_ body: Data) -> (Int, Data, String) {
         let decoder = JSONDecoder()
-        guard let incoming = try? decoder.decode(PlaybackSession.self, from: body) else {
+        guard var incoming = try? decoder.decode(PlaybackSession.self, from: body) else {
             return Self.json(400, ["success": false, "message": "Invalid JSON"])
         }
+
+        // Rewrite obvious MPEG-TS Channels URLs toward HLS for AVPlayer.
+        var rewritten = false
+        incoming.slots = incoming.slots.map { slot in
+            guard let url = slot.url, StreamURL.looksLikeMpegTS(url) else { return slot }
+            let next = StreamURL.preferHLS(url)
+            if next != url {
+                rewritten = true
+                var copy = slot
+                copy.url = next
+                return copy
+            }
+            return slot
+        }
+
         let playable = incoming.slots.filter(\.isPlayable)
         if playable.isEmpty {
             return Self.json(400, ["success": false, "message": "No playable slots"])
@@ -130,6 +155,18 @@ final class ControlServer {
                 "multiview_max": Self.multiviewMax,
             ])
         }
+
+        let stillTS = playable.contains { slot in
+            guard let url = slot.url else { return false }
+            return StreamURL.looksLikeMpegTS(url)
+        }
+        var warning: String?
+        if stillTS {
+            warning = "One or more streams look like MPEG-TS; Apple TV works best with HLS"
+        } else if rewritten {
+            warning = "Rewrote MPEG-TS URLs to HLS for AVPlayer"
+        }
+
         let capacity = LayoutGeometry.capacity(incoming.layout)
         var slots = Array(incoming.slots.prefix(capacity))
         while slots.count < capacity {
@@ -152,11 +189,16 @@ final class ControlServer {
         lock.lock()
         current = session
         lock.unlock()
-        onEvent(.session(session))
+        onEvent(.session(session, warning: warning))
+
+        var payload: [String: Any] = ["success": true]
         if let obj = Self.asJSONObject(session) {
-            return Self.json(200, ["success": true, "session": obj])
+            payload["session"] = obj
         }
-        return Self.json(200, ["success": true])
+        if let warning {
+            payload["message"] = warning
+        }
+        return Self.json(200, payload)
     }
 
     private func stopSession() -> (Int, Data, String) {
@@ -170,23 +212,23 @@ final class ControlServer {
     private func handleCec(_ body: Data) -> (Int, Data, String) {
         struct CecBody: Decodable { var action: String? }
         let action = (try? JSONDecoder().decode(CecBody.self, from: body))?.action?.lowercased()
-        let caps: [String: Any] = [
-            "power": false,
-            "volume": true,
-            "mute": true,
-            "method": "avaudio",
-        ]
         let ok: Bool
         switch action {
-        case "volume_up", "volume_down", "mute":
-            ok = true
+        case "volume_up":
+            ok = audio.volumeUp()
+        case "volume_down":
+            ok = audio.volumeDown()
+        case "mute":
+            ok = audio.toggleMute()
+        case "power_on", "power_off":
+            ok = false
         default:
             ok = false
         }
         return Self.json(200, [
             "success": ok,
             "action": action as Any,
-            "capabilities": caps,
+            "capabilities": audio.capabilities(),
         ])
     }
 

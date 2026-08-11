@@ -1,50 +1,69 @@
 # TVMaestro Apple TV client
 
-tvOS app that speaks the same LAN control protocol as the Android client, so the TVMaestro web UI can tune and multiview on Apple TV.
+Full-featured tvOS app that speaks the same LAN control protocol as the Android client, so the TVMaestro web UI can tune, multiview, and adjust volume on Apple TV.
+
+## Features
+
+- Control API on port **9093** (configurable): health, info, session start/stop, CEC volume/mute
+- Multiview layouts `1`, `2x1`, `1x2`, `2x2` with empty-pane placeholders and single audio focus
+- `AVPlayer` grid with staggered start, per-pane errors, title overlays, Now Playing metadata
+- In-app volume gain / mute from the web UI (`player_gain` — tvOS cannot inject HDMI volume keys)
+- Idle-timer disabled while playing; auto-hiding chrome; Menu remote stops the session
+- Branded idle screen with LAN IP registration hints
+- Optional auth token; MPEG-TS → HLS rewrite when Channels DVR query params allow it
 
 ## Requirements
 
 - Xcode 15+ (tvOS 17 SDK)
 - Apple TV on the same LAN as the TVMaestro server
-- **HLS** stream URLs from Channels DVR (raw MPEG-TS is unreliable on `AVPlayer`)
+- Leave the app **open** (tvOS has no Android-style boot foreground service)
 
 ## Build & run
 
 ```bash
+# Automated (CI / local with Xcode installed)
+scripts/build-appletv.sh
+
+# Or open in Xcode
 open appletv/TVMaestro.xcodeproj
 ```
 
-1. Select the **TVMaestro** scheme and your Apple TV (or simulator).
-2. Set your **Team** under Signing & Capabilities if deploying to a device.
-3. Run. Allow **Local Network** when prompted.
-4. Note the IP shown on the idle screen (control port defaults to **9093**).
-5. In the web UI: **+ Device** → Apple TV LAN IP → port `9093`.
+`scripts/build-all.sh` includes the Apple TV step when full Xcode is available. GitHub Actions builds the tvOS Simulator app on `macos-15` and uploads the `.app` artifact.
 
-Optional: set a matching auth token in **Settings** on the Apple TV and on the device row in the web UI.
+### Device install
+
+1. Select the **TVMaestro** scheme and your Apple TV (or simulator).
+2. Set your **Team** under Signing & Capabilities for device installs.
+3. Run. Allow **Local Network** when prompted.
+4. Register the IP shown on the idle screen in the web UI (**+ Device**, port `9093`).
 
 ## Control API
-
-Same contract as Android:
 
 | Method | Path | Body |
 |--------|------|------|
 | GET | `/api/health` | |
-| GET | `/api/info` | capabilities (`platform: tvos`, `hls: true`, `mpeg_ts: false`) |
+| GET | `/api/info` | `platform: tvos`, capabilities, CEC flags |
 | POST | `/api/session` | `{ id, mode, layout, slots:[{url,title,audio,channel_id}] }` |
 | GET | `/api/session` | current session |
 | POST | `/api/session/stop` | |
-| POST | `/api/cec` | volume/mute acknowledged; power not supported on tvOS |
+| POST | `/api/cec` | `volume_up` / `volume_down` / `mute` (power returns `success: false`) |
 
-## Multiview
+Optional header: `X-Auth-Token`.
 
-Layouts `1`, `2x1`, `1x2`, `2x2` — one `AVPlayer` per playable slot; empty panes keep grid position; exactly one audio-focus slot.
+## Channels DVR
 
-## Channels DVR tip
+Prefer HLS playlists (`format=hls`). Raw MPEG-TS is unreliable on `AVPlayer`. The client rewrites `format=ts` → `format=hls` when that query param is present and warns otherwise.
 
-Prefer an HLS playlist in your M3U (or a per-tune HLS URL) rather than `format=ts`. The client advertises `mpeg_ts: false` so the server/UI can treat Apple TV accordingly.
+## Platform limits
 
-## Limits (v0.1)
+| Capability | Status |
+|------------|--------|
+| Playback + multiview | Yes |
+| Volume / mute from web UI | In-app gain on audio-focus pane |
+| TV HDMI volume via Siri Remote | System / CEC (outside this app) |
+| Wake / Sleep | Not available — use Siri Remote or Apple TV HDMI-CEC settings |
+| Always-on after reboot | Keep app running / re-open after reboot |
 
-- No TV wake/sleep via this app (use the Siri Remote / system HDMI-CEC).
-- No custom app icon / top shelf art yet.
-- Not built in CI (needs macOS + Xcode).
+## Version
+
+0.2.0
