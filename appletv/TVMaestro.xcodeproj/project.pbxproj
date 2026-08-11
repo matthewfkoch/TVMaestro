@@ -1,0 +1,273 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift */; };
+		97595C8FC2474CAF91247F8B /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7595C8FC2474CAF91247F8B /* AppModel.swift */; };
+		E80D4FB721344656845DACED /* SessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80D4FB721344656845DACED /* SessionModels.swift */; };
+		98E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */; };
+		D8A25408A65C482588B3A7D9 /* ControlServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8A25408A65C482588B3A7D9 /* ControlServer.swift */; };
+		390A4C9A15474D09B707126A /* LocalIP.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90A4C9A15474D09B707126A /* LocalIP.swift */; };
+		331252BCA8584220A7A13828 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31252BCA8584220A7A13828 /* ContentView.swift */; };
+		727D49460AA34EABA9A1754A /* PlayerGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A27D49460AA34EABA9A1754A /* PlayerGridView.swift */; };
+		9105B19D34F94B059B9942A7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A105B19D34F94B059B9942A7 /* SettingsView.swift */; };
+		3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		17898D92FE8148ECB0AC5FCC /* TVMaestro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TVMaestro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVMaestroApp.swift; sourceTree = "<group>"; };
+		A7595C8FC2474CAF91247F8B /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		A80D4FB721344656845DACED /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
+		A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinyHTTPServer.swift; sourceTree = "<group>"; };
+		A8A25408A65C482588B3A7D9 /* ControlServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlServer.swift; sourceTree = "<group>"; };
+		A90A4C9A15474D09B707126A /* LocalIP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalIP.swift; sourceTree = "<group>"; };
+		A31252BCA8584220A7A13828 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A27D49460AA34EABA9A1754A /* PlayerGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerGridView.swift; sourceTree = "<group>"; };
+		A105B19D34F94B059B9942A7 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A52231E8CF9744FCD8DB28280 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BF0A9C8DA182434586DF8195 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B00000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000002 /* TVMaestro */,
+				B00000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B00000000000000000000002 /* TVMaestro */ = {
+			isa = PBXGroup;
+			children = (
+				A4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift */,
+				A7595C8FC2474CAF91247F8B /* AppModel.swift */,
+				A80D4FB721344656845DACED /* SessionModels.swift */,
+				A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */,
+				A8A25408A65C482588B3A7D9 /* ControlServer.swift */,
+				A90A4C9A15474D09B707126A /* LocalIP.swift */,
+				A31252BCA8584220A7A13828 /* ContentView.swift */,
+				A27D49460AA34EABA9A1754A /* PlayerGridView.swift */,
+				A105B19D34F94B059B9942A7 /* SettingsView.swift */,
+				A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */,
+				A52231E8CF9744FCD8DB28280 /* Info.plist */,
+			);
+			path = TVMaestro;
+			sourceTree = "<group>";
+		};
+		B00000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				17898D92FE8148ECB0AC5FCC /* TVMaestro.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		230E8358F7D84522A80D71FB /* TVMaestro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 71CFC29702FD4F2B9278F15C /* Build configuration list for PBXNativeTarget "TVMaestro" */;
+			buildPhases = (
+				1D72D27F303E41BC967FEA25 /* Sources */,
+				BF0A9C8DA182434586DF8195 /* Frameworks */,
+				E97D6B1E41534D75A312DC68 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TVMaestro;
+			productName = TVMaestro;
+			productReference = 17898D92FE8148ECB0AC5FCC /* TVMaestro.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BF92237A0D614C599AAC858A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = 66700BFC375F4C738EEB6476 /* Build configuration list for PBXProject "TVMaestro" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B00000000000000000000001;
+			productRefGroup = B00000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				230E8358F7D84522A80D71FB /* TVMaestro */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E97D6B1E41534D75A312DC68 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1D72D27F303E41BC967FEA25 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift in Sources */,
+				97595C8FC2474CAF91247F8B /* AppModel.swift in Sources */,
+				E80D4FB721344656845DACED /* SessionModels.swift in Sources */,
+				98E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift in Sources */,
+				D8A25408A65C482588B3A7D9 /* ControlServer.swift in Sources */,
+				390A4C9A15474D09B707126A /* LocalIP.swift in Sources */,
+				331252BCA8584220A7A13828 /* ContentView.swift in Sources */,
+				727D49460AA34EABA9A1754A /* PlayerGridView.swift in Sources */,
+				9105B19D34F94B059B9942A7 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		5FFD0884FFAB499981388498 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = appletvos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
+		63042A5B50AE4E3399041982 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = appletvos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F3D93B03D8954D31B1060F54 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TVMaestro/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tvmaestro.client;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
+		F84850845C094E119B00C3C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TVMaestro/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tvmaestro.client;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		66700BFC375F4C738EEB6476 /* Build configuration list for PBXProject "TVMaestro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5FFD0884FFAB499981388498 /* Debug */,
+				63042A5B50AE4E3399041982 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		71CFC29702FD4F2B9278F15C /* Build configuration list for PBXNativeTarget "TVMaestro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F3D93B03D8954D31B1060F54 /* Debug */,
+				F84850845C094E119B00C3C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BF92237A0D614C599AAC858A /* Project object */;
+}

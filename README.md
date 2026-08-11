@@ -9,7 +9,7 @@ EPG orchestrator for [Channels DVR](https://getchannels.com/) with a polished we
 - **Server** (Python / FastAPI, port **6790**) — ingests Channels DVR M3U + XMLTV, device registry, session orchestration
 - **Web UI** (React / Vite) — broadcast-style EPG, tune sheet, multiview composer, CEC controls
 - **Android client** (Kotlin / Media3 ExoPlayer, control API **9093**) — plays HLS/MPEG-TS; best-effort HDMI-CEC
-- **Apple TV** (`appletv/`) — Phase 4 stub (protocol notes only; no tvOS sources yet)
+- **Apple TV** (`appletv/`) — tvOS client (same control API as Android; prefer HLS streams)
 
 Control plane: browser → TVMaestro server → Android device.  
 Media plane: Android device pulls stream URLs directly from Channels (or APITuner).
@@ -61,6 +61,10 @@ npm run dev
 Vite proxies `/api` to `http://127.0.0.1:6790`.
 
 To serve the built UI from the Python server (non-Docker), run `scripts/build-web.sh` — it builds `web/` and copies assets into `server/tvmaestro/web/`.
+
+### Apple TV client
+
+Open `appletv/TVMaestro.xcodeproj` in Xcode, run on an Apple TV (tvOS 17+), then **+ Device** with the Apple TV LAN IP and port `9093`. Prefer **HLS** URLs from Channels DVR — see `appletv/README.md`.
 
 ### Android client
 
