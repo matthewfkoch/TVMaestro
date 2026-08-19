@@ -22,57 +22,21 @@ Full-featured tvOS app that speaks the same LAN control protocol as the Android 
 
 | Method | Best for |
 |--------|----------|
-| **TestFlight** | Your Apple TV at home — no weekly Xcode reinstall |
+| **TestFlight** | Your Apple TV — same Apple account as Big Stick Invitational |
 | **Xcode Run** | Active development / debugging |
 | **Simulator** | UI smoke test only (not on a real TV) |
 
 ## TestFlight
 
-### One-time App Store Connect setup
-
-1. Register bundle ID **`com.tvmaestro.client`** (Apple TV) in the [Developer portal](https://developer.apple.com/account/resources/identifiers/list).
-2. **App Store Connect → Apps → +** → New App → platform **tvOS**, bundle ID above.
-3. **Users and Access → Integrations → App Store Connect API** → create key → download `.p8`.
-
-### GitHub Actions (automated)
-
-Add repository secrets:
-
-| Secret | Description |
-|--------|-------------|
-| `APPLE_TEAM_ID` | 10-char Team ID |
-| `ASC_KEY_ID` | API key ID |
-| `ASC_ISSUER_ID` | Issuer UUID |
-| `ASC_PRIVATE_KEY` | Contents of `AuthKey_*.p8` |
-
-Then either:
-
-- Push a tag: `git tag v0.2.1 && git push origin v0.2.1` (runs **TestFlight (Apple TV)** workflow), or
-- **Actions → TestFlight (Apple TV) → Run workflow**
-
-### Local upload
+Same Apple Developer account as **Big Stick Invitational**. BSI uses `eas build --auto-submit` for iPhone; TVMaestro uses Fastlane for native tvOS.
 
 ```bash
+export FASTLANE_USER=your@email.com
 export APPLE_TEAM_ID=XXXXXXXXXX
-export ASC_KEY_ID=XXXXXXXXXX
-export ASC_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-export ASC_API_KEY_PATH=$HOME/.appstoreconnect/AuthKey_XXXXXX.p8
 scripts/testflight-appletv.sh
 ```
 
-Or from `appletv/` after `bundle install`:
-
-```bash
-bundle exec fastlane beta   # upload
-bundle exec fastlane build  # IPA only, no upload
-```
-
-### On the Apple TV
-
-1. Install **TestFlight** from the tvOS App Store.
-2. Open TestFlight → **TVMaestro** → Install (internal testing — add your Apple ID under App Store Connect → TestFlight → Internal Testing if needed).
-3. Launch TVMaestro, allow **Local Network**.
-4. In the web UI: **+ Device** → Apple TV LAN IP → port **9093**.
+Full setup (App Store Connect app, `testflight.json` → `ascAppId`): **`docs/TESTFLIGHT.md`**
 
 ## Xcode direct install
 
@@ -80,15 +44,9 @@ bundle exec fastlane build  # IPA only, no upload
 open appletv/TVMaestro.xcodeproj
 ```
 
-1. **Signing & Capabilities** → your Team.
-2. Pair Apple TV (**Window → Devices and Simulators**).
-3. Select the TV as destination → **Run** (⌘R).
+Pair the Apple TV in **Window → Devices and Simulators**, set your Team under Signing, select the TV as destination, and **Run** (⌘R).
 
-Simulator-only build:
-
-```bash
-scripts/build-appletv.sh
-```
+Simulator-only build: `scripts/build-appletv.sh`
 
 ## Control API
 
@@ -105,7 +63,7 @@ Optional header: `X-Auth-Token`.
 
 ## Channels DVR
 
-Prefer HLS playlists (`format=hls`). Raw MPEG-TS is unreliable on `AVPlayer`. The client rewrites `format=ts` → `format=hls` when that query param is present; the web UI warns when tuning MPEG-TS to Apple TV.
+Prefer HLS playlists (`format=hls`). Raw MPEG-TS is unreliable on `AVPlayer`. The web UI warns when tuning MPEG-TS to Apple TV.
 
 ## Platform limits
 
@@ -113,8 +71,7 @@ Prefer HLS playlists (`format=hls`). Raw MPEG-TS is unreliable on `AVPlayer`. Th
 |------------|--------|
 | Playback + multiview | Yes |
 | Volume / mute from web UI | In-app gain on audio-focus pane |
-| TV HDMI volume via Siri Remote | System / CEC (outside this app) |
-| Wake / Sleep | Not available — use Siri Remote or Apple TV HDMI-CEC settings |
+| Wake / Sleep | Not available |
 | Always-on after reboot | Re-open app (or launch from TestFlight) |
 
 ## Version

@@ -1,43 +1,50 @@
 #!/usr/bin/env bash
-# Build and upload the tvOS app to TestFlight (requires App Store Connect API key).
+# Build + upload TVMaestro to TestFlight — same Apple account as Big Stick Invitational.
 #
-# One-time setup:
-#   1. Create app in App Store Connect: bundle ID com.tvmaestro.client, Apple TV platform
-#   2. App Store Connect → Users and Access → Keys → create API key (Admin or App Manager)
-#   3. Export AuthKey_XXXXXX.p8 and set env vars below
+# Big Stick uses:  cd apps/mobile && npx eas build --platform ios --profile production --auto-submit
+# TVMaestro (native tvOS) uses Fastlane instead — EAS does not build tvOS Swift apps.
 #
-# Usage:
-#   export APPLE_TEAM_ID=XXXXXXXXXX
-#   export ASC_KEY_ID=XXXXXXXXXX
-#   export ASC_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-#   export ASC_API_KEY_PATH=$HOME/.appstoreconnect/AuthKey_XXXXXX.p8
+# One-time:
+#   1. App Store Connect → Apps → + → tvOS app, bundle ID com.tvmaestro.client
+#   2. Copy numeric Apple ID into appletv/testflight.json → ascAppId
+#   3. export APPLE_TEAM_ID=XXXXXXXXXX   # same team as BSI
+#   4. export FASTLANE_USER=your@email.com
+#
+# Or register automatically:
+#   cd appletv && bundle exec fastlane setup
+#
+# Upload:
 #   scripts/testflight-appletv.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/appletv"
 
 if ! command -v xcodebuild >/dev/null 2>&1 || ! xcodebuild -version >/dev/null 2>&1; then
-  echo "Full Xcode is required (not Command Line Tools only)." >&2
-  exit 1
-fi
-
-: "${APPLE_TEAM_ID:?Set APPLE_TEAM_ID}"
-: "${ASC_KEY_ID:?Set ASC_KEY_ID}"
-: "${ASC_ISSUER_ID:?Set ASC_ISSUER_ID}"
-: "${ASC_API_KEY_PATH:?Set ASC_API_KEY_PATH to your .p8 file}"
-
-if [[ ! -f "$ASC_API_KEY_PATH" ]]; then
-  echo "ASC API key not found: $ASC_API_KEY_PATH" >&2
+  echo "Full Xcode is required." >&2
   exit 1
 fi
 
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 
+if [[ -z "${FASTLANE_USER:-}" ]]; then
+  echo "Apple ID for TestFlight (same as Big Stick / EAS):"
+  read -r FASTLANE_USER
+  export FASTLANE_USER
+fi
+
+if [[ -z "${APPLE_TEAM_ID:-}" ]]; then
+  echo "Team ID (10 chars — developer.apple.com/account → Membership):"
+  read -r APPLE_TEAM_ID
+  export APPLE_TEAM_ID
+fi
+
 if ! command -v bundle >/dev/null 2>&1; then
-  echo "Ruby bundler not found. Install: gem install bundler" >&2
+  echo "Install bundler: gem install bundler" >&2
   exit 1
 fi
 
 bundle config set --local path 'vendor/bundle'
 bundle install --quiet
+
+echo "Building + uploading to TestFlight (Fastlane will prompt for Apple 2FA if needed)…"
 bundle exec fastlane beta "$@"
