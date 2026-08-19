@@ -86,9 +86,15 @@ export default function App() {
   }, [reload]);
 
   const sessionsByDevice = useMemo(() => {
+    const rank = (status: string) =>
+      status === "playing" || status === "pending" ? 2 : status === "error" ? 0 : 1;
     const map: Record<string, Session | undefined> = {};
     for (const s of sessions) {
-      if (s.status !== "stopped") map[s.device_id] = s;
+      if (s.status === "stopped") continue;
+      const existing = map[s.device_id];
+      if (!existing || rank(s.status) >= rank(existing.status)) {
+        map[s.device_id] = s;
+      }
     }
     return map;
   }, [sessions]);

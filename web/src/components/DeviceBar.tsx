@@ -59,7 +59,12 @@ export default function DeviceBar({
                 HLS
               </span>
             )}
-            {session && session.status !== "stopped" && (
+            {session && session.status === "error" && (
+              <span className="pill warn" title={session.error || "Tune failed"}>
+                error
+              </span>
+            )}
+            {session && session.status !== "stopped" && session.status !== "error" && (
               <>
                 <span className="pill">{session.layout}</span>
                 <button
@@ -86,24 +91,26 @@ export default function DeviceBar({
               Edit
             </button>
             <div className="device-cec" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                className="btn"
-                disabled={!cec?.power}
-                title="Wake (Android TV Remote or adb) — TV follows via CEC"
-                onClick={() => onCec(d.id, "power_on")}
-              >
-                Wake
-              </button>
-              <button
-                type="button"
-                className="btn"
-                disabled={!cec?.power}
-                title="Sleep (Android TV Remote or adb) — TV follows via CEC"
-                onClick={() => onCec(d.id, "power_off")}
-              >
-                Sleep
-              </button>
+              {cec?.power ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn"
+                    title="Wake (Android TV Remote or adb) — TV follows via CEC"
+                    onClick={() => onCec(d.id, "power_on")}
+                  >
+                    Wake
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    title="Sleep (Android TV Remote or adb) — TV follows via CEC"
+                    onClick={() => onCec(d.id, "power_off")}
+                  >
+                    Sleep
+                  </button>
+                </>
+              ) : null}
               <button
                 type="button"
                 className="btn"

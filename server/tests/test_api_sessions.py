@@ -191,6 +191,43 @@ def test_push_failure_returns_502(client: TestClient, registered_device):
         )
     assert resp.status_code == 502
     assert "device refused" in resp.json()["detail"]
+    listed = client.get("/api/sessions")
+    assert listed.status_code == 200
+    assert listed.json() == []
+
+
+def test_push_failure_keeps_prior_playing_session(client: TestClient, registered_device):
+    first = client.post(
+        "/api/sessions",
+        json={
+            "device_id": registered_device.id,
+            "mode": "single",
+            "layout": "1",
+            "slots": [{"url": "http://dvr.example/live.ts", "audio": True}],
+        },
+    )
+    assert first.status_code == 200
+    prior_id = first.json()["id"]
+
+    with patch(
+        "tvmaestro.client_proxy.push_session",
+        new=AsyncMock(side_effect=RuntimeError("device refused")),
+    ):
+        resp = client.post(
+            "/api/sessions",
+            json={
+                "device_id": registered_device.id,
+                "mode": "single",
+                "layout": "1",
+                "slots": [{"url": "http://dvr.example/other.ts", "audio": True}],
+            },
+        )
+    assert resp.status_code == 502
+    listed = client.get("/api/sessions").json()
+    current = [s for s in listed if s["status"] != "stopped"]
+    assert len(current) == 1
+    assert current[0]["id"] == prior_id
+    assert current[0]["status"] == "playing"
 
 
 def test_stop_missing_session(client: TestClient):

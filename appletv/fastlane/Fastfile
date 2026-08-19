@@ -36,13 +36,6 @@ platform :tvos do
     cfg = testflight_config
     team_id = resolve_team_id
 
-    update_code_signing_settings(
-      use_automatic_signing: true,
-      team_id: team_id,
-      path: "TVMaestro.xcodeproj",
-      targets: ["TVMaestro"]
-    )
-
     if ENV["GITHUB_RUN_NUMBER"]
       increment_build_number(
         build_number: ENV["GITHUB_RUN_NUMBER"],
@@ -63,7 +56,7 @@ platform :tvos do
       configuration: "Release",
       export_method: "app-store",
       destination: "generic/platform=tvOS",
-      xcargs: "-allowProvisioningUpdates",
+      xcargs: "-allowProvisioningUpdates DEVELOPMENT_TEAM=#{team_id}",
       export_options: {
         method: "app-store",
         signingStyle: "automatic",
@@ -87,19 +80,13 @@ platform :tvos do
   desc "Build App Store IPA locally (no upload)"
   lane :build do
     team_id = resolve_team_id
-    update_code_signing_settings(
-      use_automatic_signing: true,
-      team_id: team_id,
-      path: "TVMaestro.xcodeproj",
-      targets: ["TVMaestro"]
-    )
     build_app(
       project: "TVMaestro.xcodeproj",
       scheme: "TVMaestro",
       configuration: "Release",
       export_method: "app-store",
       destination: "generic/platform=tvOS",
-      xcargs: "-allowProvisioningUpdates",
+      xcargs: "-allowProvisioningUpdates DEVELOPMENT_TEAM=#{team_id}",
       export_options: {
         method: "app-store",
         signingStyle: "automatic",

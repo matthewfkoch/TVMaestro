@@ -161,7 +161,7 @@ async def list_devices():
 
 @app.post("/api/devices")
 async def create_device(body: DeviceCreate):
-    device = _devices().add(body)
+    device = await _devices().add(body)
     await _devices().poll_one(device.id)
     device = _devices().get(device.id)
     return public_device(device.model_dump()) if device else device
@@ -181,7 +181,7 @@ async def patch_device(device_id: str, body: DeviceUpdate):
         body.model_dump(exclude_unset=True),
         keys=("token",),
     )
-    device = _devices().update(device_id, DeviceUpdate(**updates))
+    device = await _devices().update(device_id, DeviceUpdate(**updates))
     if not device:
         raise HTTPException(404, "Device not found")
     await _devices().poll_one(device_id)
@@ -191,8 +191,10 @@ async def patch_device(device_id: str, body: DeviceUpdate):
 
 @app.delete("/api/devices/{device_id}")
 async def delete_device(device_id: str):
-    if not _devices().delete(device_id):
+    if not _devices().get(device_id):
         raise HTTPException(404, "Device not found")
+    await _sessions().stop_device(device_id)
+    await _devices().delete(device_id)
     await androidtv_remote.remotes().drop(device_id)
     return {"ok": True}
 

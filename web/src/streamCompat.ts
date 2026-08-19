@@ -38,6 +38,12 @@ export function streamCompatWarning(
   return `${label} prefers HLS. This channel URL looks like MPEG-TS and may not play. In Channels DVR, use format=hls in your M3U URL.`;
 }
 
+export function youtubeCompatWarning(device: Device | null | undefined): string | null {
+  if (!device || !devicePrefersHls(device)) return null;
+  const label = isAppleTvDevice(device) ? "Apple TV" : device.name;
+  return `${label} prefers HLS. APITuner YouTube streams are MPEG-TS and often will not play. Tune a Channels HLS channel instead, or play YouTube on Android TV.`;
+}
+
 export function multiviewStreamWarnings(
   device: Device | null | undefined,
   channels: Array<Channel | null>,

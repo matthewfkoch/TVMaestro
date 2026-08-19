@@ -11,8 +11,8 @@ EPG orchestrator for [Channels DVR](https://getchannels.com/) with a polished we
 - **Android client** (Kotlin / Media3 ExoPlayer, control API **9093**) — plays HLS/MPEG-TS; best-effort HDMI-CEC
 - **Apple TV** (`appletv/`) — tvOS client (same control API as Android; prefer HLS streams)
 
-Control plane: browser → TVMaestro server → Android device.  
-Media plane: Android device pulls stream URLs directly from Channels (or APITuner).
+Control plane: browser → TVMaestro server → Android TV or Apple TV client.  
+Media plane: the client pulls stream URLs directly from Channels (or APITuner).
 
 **Security note:** the control API is unauthenticated by default (trusted LAN). Do not expose port `6790` to the public internet. `client_auth_token` in config is reserved for a future auth gate and is not enforced yet. Auth tokens in API responses are redacted.
 
@@ -140,10 +140,10 @@ Multiview max depends on the SoC: capable devices report up to 4 panes; many Aml
 | POST | `/api/refresh` | Refresh M3U / XMLTV |
 | GET | `/api/channels` | Channel list from M3U |
 | GET | `/api/epg?from=&to=` | Programmes |
-| GET/POST | `/api/devices` | Register Android endpoints |
+| GET/POST | `/api/devices` | Register Android TV / Apple TV endpoints |
 | PATCH/DELETE | `/api/devices/{id}` | Update / remove device |
 | POST | `/api/devices/{id}/cec` | `power_on`, `power_off`, `volume_up`, `volume_down`, `mute` |
-| POST | `/api/devices/{id}/pair/start` · `/pair/finish` | Android TV Remote pairing |
+| POST | `/api/devices/{id}/pair/start` · `/pair/finish` | Android TV Remote pairing (not Apple TV) |
 | GET/POST | `/api/sessions` | List / start single or multiview |
 | POST | `/api/sessions/{id}/stop` | Stop playback |
 | POST | `/api/youtube/resolve` | Resolve YouTube URL via APITuner → MPEG-TS slot |
@@ -156,16 +156,16 @@ Multiview max depends on the SoC: capable devices report up to 4 panes; many Aml
 
 ## CEC
 
-Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick).
+Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick). On **Apple TV**, volume/mute adjust in-app gain on the audio-focus pane (tvOS cannot inject HDMI volume keys). Wake/Sleep are Android-only.
 
-**Wake/Sleep (preferred):** pair **Android TV Remote** once from **Edit device → Pair** (PIN on the TV). The server uses the Google TV remote protocol (`androidtvremote2`) — no ADB. Enable One Touch Play / CEC TV Off in the device Power Control settings so the TV follows. Works on Shield / Google TV / Android TV (not Fire OS).
+**Wake/Sleep (preferred):** pair **Android TV Remote** once from **Edit device → Pair** (PIN on the TV). The server uses the Google TV remote protocol (`androidtvremote2`) — no ADB. Enable One Touch Play / CEC TV Off in the device Power Control settings so the TV follows. Works on Shield / Google TV / Android TV (not Fire OS, not Apple TV).
 
 **Wake/Sleep (fallback):** if unpaired, the server can use **adb** `KEYCODE_WAKEUP` / `KEYCODE_SLEEP` when network debugging is on (`host:5555`) and Docker mounts host `~/.android` keys (see `docker-compose.yml`).
 
 ## YouTube
 
-Set **APITuner base URL** in Settings. TVMaestro asks APITuner for a playable MPEG-TS URL (encoder relay), then plays it in the client like any other channel.
+Set **APITuner base URL** in Settings. TVMaestro asks APITuner for a playable MPEG-TS URL (encoder relay), then plays it on **Android TV**. Apple TV prefers HLS from Channels DVR; YouTube/TS on tvOS is best-effort and usually fails.
 
 ## License
 
-See repository license when published.
+[MIT](LICENSE) © 2026 Matthew Koch.

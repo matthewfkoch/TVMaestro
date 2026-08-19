@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, REDACTED_SECRET, type Device } from "../api";
+import { isAppleTvDevice } from "../streamCompat";
 
 type Props = {
   open: boolean;
@@ -31,6 +32,10 @@ export default function EditDeviceModal({ open, device, onClose, onSaved }: Prop
     setPin("");
     setPairMsg(null);
     setPaired(null);
+    if (isAppleTvDevice(device)) {
+      setPaired(false);
+      return;
+    }
     void api
       .pairStatus(device.id)
       .then((s) => setPaired(s.paired))
@@ -108,6 +113,7 @@ export default function EditDeviceModal({ open, device, onClose, onSaved }: Prop
   }
 
   const caps = device.capabilities;
+  const appleTv = isAppleTvDevice(device);
 
   return (
     <div className="modal-center">
@@ -150,6 +156,7 @@ export default function EditDeviceModal({ open, device, onClose, onSaved }: Prop
               onChange={(e) => setToken(e.target.value)}
             />
           </div>
+          {!appleTv && (
           <div
             style={{
               borderTop: "1px solid var(--line)",
@@ -198,6 +205,13 @@ export default function EditDeviceModal({ open, device, onClose, onSaved }: Prop
               <p style={{ margin: 0, color: "var(--accent)", fontSize: "0.85rem" }}>{pairMsg}</p>
             )}
           </div>
+          )}
+          {appleTv && (
+            <p style={{ margin: 0, color: "var(--text-dim)", fontSize: "0.8rem" }}>
+              Apple TV has no Wake/Sleep from TVMaestro. Volume/mute adjust in-app gain. Prefer HLS
+              streams from Channels DVR.
+            </p>
+          )}
         </div>
         {error && (
           <div className="error" style={{ marginTop: "0.75rem" }}>

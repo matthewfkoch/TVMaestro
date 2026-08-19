@@ -17,14 +17,49 @@
 #   scripts/testflight-appletv.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Load local secrets if present (gitignored). Do not commit this file.
+#   appletv/.env  or  ~/.tvmaestro-testflight.env
+load_env_file() {
+  local f="$1"
+  [[ -f "$f" ]] || return 0
+  set -a
+  # shellcheck disable=SC1090
+  source "$f"
+  set +a
+}
+load_env_file "$HOME/.tvmaestro-testflight.env"
+load_env_file "$ROOT/appletv/.env"
+
 cd "$ROOT/appletv"
 
-if ! command -v xcodebuild >/dev/null 2>&1 || ! xcodebuild -version >/dev/null 2>&1; then
-  echo "Full Xcode is required." >&2
+XCODE_APP="${XCODE_APP:-/Applications/Xcode.app}"
+if [[ -d "$XCODE_APP/Contents/Developer" ]]; then
+  export DEVELOPER_DIR="$XCODE_APP/Contents/Developer"
+fi
+
+xcodebuild_bin="${DEVELOPER_DIR:-}/usr/bin/xcodebuild"
+if [[ ! -x "$xcodebuild_bin" ]]; then
+  xcodebuild_bin="$(command -v xcodebuild || true)"
+fi
+
+if [[ -z "$xcodebuild_bin" || ! -x "$xcodebuild_bin" ]] || ! "$xcodebuild_bin" -version >/dev/null 2>&1; then
+  echo "Full Xcode is required (Command Line Tools alone cannot build tvOS)." >&2
+  echo "" >&2
+  if [[ -d "$XCODE_APP" ]]; then
+    echo "Xcode is installed at $XCODE_APP but is not active. Run:" >&2
+    echo "  sudo xcode-select -s $XCODE_APP/Contents/Developer" >&2
+    echo "" >&2
+    echo "Or for this session only:" >&2
+    echo "  export DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >&2
+  else
+    echo "Install Xcode from the Mac App Store, then run:" >&2
+    echo "  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer" >&2
+  fi
   exit 1
 fi
 
-export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+export PATH="$(dirname "$xcodebuild_bin"):$PATH"
 
 if [[ -z "${FASTLANE_USER:-}" ]]; then
   echo "Apple ID for TestFlight (same as Big Stick / EAS):"

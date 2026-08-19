@@ -1,4 +1,4 @@
-"""Session orchestration — resolve slots and push to Android clients."""
+"""Session orchestration — resolve slots and push to Android / Apple TV clients."""
 
 from __future__ import annotations
 
@@ -127,12 +127,15 @@ class SessionManager:
                 prior.updated_at = session.updated_at
                 self._sessions[prior.id] = prior
             self._by_device[device.id] = session.id
+            self._sessions[session.id] = session
         except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to push session to %s", device.id)
             session.status = "error"
             session.error = str(exc)
             session.updated_at = time.time()
-        self._sessions[session.id] = session
+            # Do not keep failed attempts in the session list (UI would hide the
+            # session that is still playing on the device).
+            self._sessions.pop(session.id, None)
         return session
 
     async def stop(self, session_id: str) -> Optional[SessionState]:

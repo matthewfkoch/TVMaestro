@@ -8,7 +8,6 @@ import logging
 import shutil
 import time
 import uuid
-from pathlib import Path
 from typing import Optional
 
 from . import client_proxy
@@ -64,16 +63,20 @@ class DeviceRegistry:
             await asyncio.sleep(10)
 
     async def poll_all(self) -> None:
-        for device_id in list(self._devices.keys()):
+        async with self._lock:
+            ids = list(self._devices.keys())
+        for device_id in ids:
             await self.poll_one(device_id)
 
     async def poll_one(self, device_id: str) -> Optional[Device]:
-        device = self._devices.get(device_id)
-        if not device:
-            return None
+        async with self._lock:
+            device = self._devices.get(device_id)
+            if not device:
+                return None
+            snapshot = device.model_copy(deep=True)
         try:
-            await client_proxy.health(device)
-            info = await client_proxy.info(device)
+            await client_proxy.health(snapshot)
+            info = await client_proxy.info(snapshot)
             caps_raw = info.get("capabilities") or info.get("cec") or {}
             cec_raw = caps_raw.get("cec") if isinstance(caps_raw.get("cec"), dict) else caps_raw
             if not isinstance(cec_raw, dict):
@@ -101,15 +104,15 @@ class DeviceRegistry:
                 mute=bool(cec_raw.get("mute", True)),
                 method=method,
             )
-            device.online = True
-            device.last_seen = time.time()
-            device.model = info.get("model") or device.model
-            device.manufacturer = info.get("manufacturer") or device.manufacturer
-            device.android_version = (
+            snapshot.online = True
+            snapshot.last_seen = time.time()
+            snapshot.model = info.get("model") or snapshot.model
+            snapshot.manufacturer = info.get("manufacturer") or snapshot.manufacturer
+            snapshot.android_version = (
                 str(info.get("androidVersion") or info.get("android_version") or "")
-                or device.android_version
+                or snapshot.android_version
             )
-            device.capabilities = DeviceCapabilities(
+            snapshot.capabilities = DeviceCapabilities(
                 multiview_max=int(caps_raw.get("multiview_max", 1)),
                 layouts=list(caps_raw.get("layouts") or ["1"]),
                 cec=cec,
@@ -123,16 +126,23 @@ class DeviceRegistry:
                 ),
                 chip_note=str(caps_raw.get("chip_note") or ""),
             )
-            self._devices[device_id] = device
-            self._save()
+            async with self._lock:
+                if device_id not in self._devices:
+                    return None
+                self._devices[device_id] = snapshot
+                self._save()
+            return snapshot
         except Exception as exc:  # noqa: BLE001
             logger.debug("Device %s offline: %s", device_id, exc)
-            was_online = device.online
-            device.online = False
-            self._devices[device_id] = device
-            if was_online:
-                self._save()
-        return device
+            async with self._lock:
+                device = self._devices.get(device_id)
+                if not device:
+                    return None
+                was_online = device.online
+                device.online = False
+                if was_online:
+                    self._save()
+                return device
 
     def list(self) -> list[Device]:
         return sorted(self._devices.values(), key=lambda d: d.name.lower())
@@ -140,7 +150,7 @@ class DeviceRegistry:
     def get(self, device_id: str) -> Optional[Device]:
         return self._devices.get(device_id)
 
-    def add(self, body: DeviceCreate) -> Device:
+    async def add(self, body: DeviceCreate) -> Device:
         device_id = body.id or str(uuid.uuid4())
         device = Device(
             id=device_id,
@@ -149,26 +159,29 @@ class DeviceRegistry:
             port=body.port,
             token=body.token,
         )
-        self._devices[device_id] = device
-        self._save()
+        async with self._lock:
+            self._devices[device_id] = device
+            self._save()
         return device
 
-    def update(self, device_id: str, body: DeviceUpdate) -> Optional[Device]:
-        device = self._devices.get(device_id)
-        if not device:
-            return None
-        data = device.model_dump()
-        patch = body.model_dump(exclude_unset=True)
-        data.update(patch)
-        device = Device.model_validate(data)
-        self._devices[device_id] = device
-        self._save()
-        return device
+    async def update(self, device_id: str, body: DeviceUpdate) -> Optional[Device]:
+        async with self._lock:
+            device = self._devices.get(device_id)
+            if not device:
+                return None
+            data = device.model_dump()
+            patch = body.model_dump(exclude_unset=True)
+            data.update(patch)
+            device = Device.model_validate(data)
+            self._devices[device_id] = device
+            self._save()
+            return device
 
-    def delete(self, device_id: str) -> bool:
-        if device_id not in self._devices:
-            return False
-        del self._devices[device_id]
-        self._save()
+    async def delete(self, device_id: str) -> bool:
+        async with self._lock:
+            if device_id not in self._devices:
+                return False
+            del self._devices[device_id]
+            self._save()
         androidtv_remote.clear_certs(device_id)
         return True

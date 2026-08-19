@@ -136,12 +136,13 @@ class AndroidTvRemoteClient:
             await self._remote.async_start_pairing()
 
     async def finish_pairing(self, pin: str) -> None:
-        if self._remote is None:
-            raise RemoteUnavailable("Pairing was not started")
-        await self._remote.async_finish_pairing(pin.strip())
-        await self._remote.async_connect()
-        self._remote.keep_reconnecting()
-        self._connected = True
+        async with self._lock:
+            if self._remote is None:
+                raise RemoteUnavailable("Pairing was not started")
+            await self._remote.async_finish_pairing(pin.strip())
+            await self._remote.async_connect()
+            self._remote.keep_reconnecting()
+            self._connected = True
 
     async def send_key(self, key: str) -> None:
         await self.connect()

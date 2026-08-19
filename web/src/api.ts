@@ -128,7 +128,6 @@ export const api = {
     body: { name?: string; host?: string; port?: number; token?: string },
   ) => req<Device>(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteDevice: (id: string) => req<{ ok: boolean }>(`/api/devices/${id}`, { method: "DELETE" }),
-  deviceStatus: (id: string) => req<{ device: Device; session: Session | null }>(`/api/devices/${id}/status`),
   cec: (id: string, action: string) =>
     req(`/api/devices/${id}/cec`, { method: "POST", body: JSON.stringify({ action }) }),
   pairStatus: (id: string) =>

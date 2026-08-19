@@ -11,6 +11,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
   const [cfg, setCfg] = useState<AppConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tunerStatus, setTunerStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -18,6 +19,14 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
       .config()
       .then(setCfg)
       .catch((e: Error) => setError(e.message));
+    api
+      .apitunerStatus()
+      .then((s) => {
+        if (!s.enabled) setTunerStatus("APITuner not configured");
+        else if (s.error) setTunerStatus(`APITuner error: ${s.error}`);
+        else setTunerStatus("APITuner reachable");
+      })
+      .catch(() => setTunerStatus(null));
   }, [open]);
 
   if (!open) return null;
@@ -81,6 +90,9 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
                 onChange={(e) => setCfg({ ...cfg, apituner_auth_token: e.target.value })}
               />
             </div>
+            {tunerStatus && (
+              <p style={{ margin: 0, color: "var(--text-dim)", fontSize: "0.85rem" }}>{tunerStatus}</p>
+            )}
             <div className="field">
               <label>M3U refresh (seconds)</label>
               <input
