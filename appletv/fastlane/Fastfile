@@ -1,0 +1,101 @@
+default_platform(:tvos)
+
+platform :tvos do
+  desc "Build Release and upload to TestFlight"
+  lane :beta do
+    team_id = ENV["APPLE_TEAM_ID"]
+    UI.user_error!("Set APPLE_TEAM_ID (10-char Team ID from developer.apple.com)") unless team_id && !team_id.empty?
+
+    api_key = asc_api_key
+
+    update_code_signing_settings(
+      use_automatic_signing: true,
+      team_id: team_id,
+      path: "TVMaestro.xcodeproj",
+      targets: ["TVMaestro"]
+    )
+
+    if ENV["GITHUB_RUN_NUMBER"]
+      increment_build_number(
+        build_number: ENV["GITHUB_RUN_NUMBER"],
+        xcodeproj: "TVMaestro.xcodeproj"
+      )
+    end
+
+    if ENV["GITHUB_REF_NAME"]&.start_with?("v")
+      version = ENV["GITHUB_REF_NAME"].delete_prefix("v")
+      if version.match?(/^\d+\.\d+\.\d+/)
+        increment_version_number(
+          version_number: version,
+          xcodeproj: "TVMaestro.xcodeproj"
+        )
+      end
+    end
+
+    build_app(
+      project: "TVMaestro.xcodeproj",
+      scheme: "TVMaestro",
+      configuration: "Release",
+      export_method: "app-store",
+      destination: "generic/platform=tvOS",
+      xcargs: "-allowProvisioningUpdates",
+      export_options: {
+        method: "app-store",
+        signingStyle: "automatic",
+        teamID: team_id,
+        uploadSymbols: true,
+        uploadBitcode: false
+      }
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false
+    )
+  end
+
+  desc "Build App Store IPA locally (no upload)"
+  lane :build do
+    team_id = ENV["APPLE_TEAM_ID"]
+    UI.user_error!("Set APPLE_TEAM_ID") unless team_id && !team_id.empty?
+
+    update_code_signing_settings(
+      use_automatic_signing: true,
+      team_id: team_id,
+      path: "TVMaestro.xcodeproj",
+      targets: ["TVMaestro"]
+    )
+
+    build_app(
+      project: "TVMaestro.xcodeproj",
+      scheme: "TVMaestro",
+      configuration: "Release",
+      export_method: "app-store",
+      destination: "generic/platform=tvOS",
+      xcargs: "-allowProvisioningUpdates",
+      export_options: {
+        method: "app-store",
+        signingStyle: "automatic",
+        teamID: team_id
+      }
+    )
+  end
+
+  private_lane :asc_api_key do
+    key_id = ENV["ASC_KEY_ID"]
+    issuer_id = ENV["ASC_ISSUER_ID"]
+    key_path = ENV["ASC_API_KEY_PATH"]
+
+    UI.user_error!("Set ASC_KEY_ID, ASC_ISSUER_ID, and ASC_API_KEY_PATH") unless key_id && issuer_id && key_path
+
+    app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_filepath: key_path,
+      duration: 1200,
+      in_house: false
+    )
+  end
+end

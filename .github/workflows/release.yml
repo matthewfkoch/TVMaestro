@@ -84,7 +84,7 @@ jobs:
 
             - **Server (Docker):** `docker compose up -d --build` or pull/build from this tag
             - **Android TV:** install `tvmaestro-android-*.apk` via `adb install -r`
-            - **Apple TV:** build from source in Xcode (`appletv/TVMaestro.xcodeproj`) — device install requires your Apple Developer signing
+            - **Apple TV:** TestFlight (see `appletv/README.md`) or build in Xcode (`appletv/TVMaestro.xcodeproj`)
             - **Web UI:** included in the Docker/server image; `tvmaestro-web-*.zip` is the static build only
 
             Apple TV clients prefer **HLS** stream URLs from Channels DVR (`format=hls`).

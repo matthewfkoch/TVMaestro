@@ -89,11 +89,62 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-GitHub Actions uploads the **Android APK** and **web dist zip** to the [Releases](https://github.com/matthewfkoch/TVMaestro/releases) page. Apple TV still installs via Xcode on your Mac (signing required).
+GitHub Actions uploads the **Android APK** and **web dist zip** to the [Releases](https://github.com/matthewfkoch/TVMaestro/releases) page. **Apple TV TestFlight** uploads on the same tag via `.github/workflows/testflight.yml` (after GitHub secrets are configured — see `appletv/README.md`).
 
 ### Apple TV client
 
-Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** with the LAN IP and port `9093`. Prefer **HLS** from Channels DVR. Leave the app open for the control API. Details: `appletv/README.md`.
+Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** with the LAN IP and port `9093`. Prefer **HLS** from Channels DVR. Leave the app open for the control API. Details below.
+
+### TestFlight (recommended for your Apple TV)
+
+Install without plugging in a Mac each week:
+
+1. **App Store Connect** → **Apps** → **+** → New App  
+   - Platform: **tvOS**  
+   - Bundle ID: `com.tvmaestro.client` (register in [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list) if needed)  
+   - Name: TVMaestro
+
+2. **App Store Connect** → **Users and Access** → **Integrations** → **App Store Connect API** → create key (Admin or App Manager). Download the `.p8` file once.
+
+3. Add **GitHub repository secrets** (Settings → Secrets and variables → Actions):
+
+   | Secret | Value |
+   |--------|--------|
+   | `APPLE_TEAM_ID` | 10-character Team ID ([Membership details](https://developer.apple.com/account#MembershipDetailsCard)) |
+   | `ASC_KEY_ID` | Key ID from the API key |
+   | `ASC_ISSUER_ID` | Issuer ID on the API keys page |
+   | `ASC_PRIVATE_KEY` | Full contents of `AuthKey_XXXXXX.p8` |
+
+4. Upload a build (pick one):
+
+   ```bash
+   # From your Mac
+   export APPLE_TEAM_ID=XXXXXXXXXX
+   export ASC_KEY_ID=XXXXXXXXXX
+   export ASC_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+   export ASC_API_KEY_PATH=$HOME/.appstoreconnect/AuthKey_XXXXXX.p8
+   scripts/testflight-appletv.sh
+   ```
+
+   Or push a version tag (also triggers TestFlight workflow):
+
+   ```bash
+   git tag v0.2.1 && git push origin v0.2.1
+   ```
+
+   Or: GitHub → **Actions** → **TestFlight (Apple TV)** → **Run workflow**.
+
+5. On the **Apple TV**: install **TestFlight** from the App Store → open → accept **TVMaestro** → Install.
+
+6. Register the device IP in the web UI (**+ Device**, port `9093`). Leave TVMaestro open.
+
+### Xcode direct install (development)
+
+```bash
+open appletv/TVMaestro.xcodeproj
+```
+
+Pair the Apple TV in **Window → Devices and Simulators**, set your Team under Signing, select the TV as destination, and **Run** (⌘R).
 
 ### Android client
 

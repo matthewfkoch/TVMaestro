@@ -1,0 +1,5 @@
+app_identifier("com.tvmaestro.client")
+
+if ENV["APPLE_TEAM_ID"]
+  team_id(ENV["APPLE_TEAM_ID"])
+end
