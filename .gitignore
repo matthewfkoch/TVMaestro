@@ -26,6 +26,8 @@ android/app/build/
 android/build/
 android/.cxx/
 appletv/build/
+appletv/TVMaestro.xcodeproj/project.xcworkspace/
+appletv/TVMaestro.xcodeproj/xcuserdata/
 *.iml
 .idea/
 .DS_Store

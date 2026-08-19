@@ -1,4 +1,5 @@
 import type { Channel, Device } from "../api";
+import { multiviewStreamWarnings } from "../streamCompat";
 
 export type LayoutId = "1" | "2x1" | "1x2" | "2x2";
 
@@ -50,6 +51,7 @@ export default function MultiviewComposer({
   const effectiveLayout = allowedLayouts.includes(layout) ? layout : allowedLayouts[0] || "1";
   const cap = Math.min(CAPACITY[effectiveLayout], deviceMax);
   const filled = slots.slice(0, cap).filter(Boolean).length;
+  const streamWarnings = multiviewStreamWarnings(selected ?? null, slots);
 
   return (
     <>
@@ -149,6 +151,16 @@ export default function MultiviewComposer({
               })}
             </div>
           </div>
+          )}
+
+          {streamWarnings.length > 0 && (
+            <div className="error" style={{ background: "rgba(255, 180, 0, 0.12)", borderColor: "rgba(255, 180, 0, 0.35)", color: "var(--text)" }}>
+              {streamWarnings.map((w) => (
+                <p key={w} style={{ margin: "0 0 0.5rem" }}>
+                  {w}
+                </p>
+              ))}
+            </div>
           )}
 
           {error && <div className="error">{error}</div>}

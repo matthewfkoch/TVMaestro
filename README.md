@@ -80,6 +80,17 @@ scripts/build-all.sh
 
 **CI** (`.github/workflows/ci.yml`) runs on every push/PR: pytest, web build, Docker image, Android debug APK, and Apple TV simulator build (macOS runner). Artifacts: `web-dist`, `android-debug-apk`, `appletv-simulator-app`.
 
+### Releases
+
+Push a version tag to publish installable assets:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+GitHub Actions uploads the **Android APK** and **web dist zip** to the [Releases](https://github.com/matthewfkoch/TVMaestro/releases) page. Apple TV still installs via Xcode on your Mac (signing required).
+
 ### Apple TV client
 
 Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** with the LAN IP and port `9093`. Prefer **HLS** from Channels DVR. Leave the app open for the control API. Details: `appletv/README.md`.

@@ -1,4 +1,5 @@
 import type { Device, Session } from "../api";
+import { devicePrefersHls } from "../streamCompat";
 
 type Props = {
   devices: Device[];
@@ -51,6 +52,11 @@ export default function DeviceBar({
             {mvMax <= 1 && (
               <span className="pill warn" title={d.capabilities?.chip_note || "Multiview not supported"}>
                 single
+              </span>
+            )}
+            {devicePrefersHls(d) && (
+              <span className="pill" title="Prefers HLS streams (MPEG-TS may fail)">
+                HLS
               </span>
             )}
             {session && session.status !== "stopped" && (

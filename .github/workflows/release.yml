@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Accept licenses
+        run: yes | sdkmanager --licenses >/dev/null || true
+      - name: Assemble debug
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon :app:assembleDebug
+      - name: Stage APK
+        run: |
+          mkdir -p ../release-assets
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            "../release-assets/tvmaestro-android-${GITHUB_REF_NAME}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: release-assets/tvmaestro-android-*.apk
+
+  web:
+    name: Web dist
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci && npm run build
+      - name: Zip dist
+        run: |
+          mkdir -p ../release-assets
+          cd dist && zip -r "../../release-assets/tvmaestro-web-${GITHUB_REF_NAME}.zip" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-web
+          path: release-assets/tvmaestro-web-*.zip
+
+  publish:
+    name: GitHub Release
+    needs: [android, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f \( -name '*.apk' -o -name '*.zip' \) -exec cp {} release-assets/ \;
+          ls -la release-assets/
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release-assets/*
+          body: |
+            ## Install
+
+            - **Server (Docker):** `docker compose up -d --build` or pull/build from this tag
+            - **Android TV:** install `tvmaestro-android-*.apk` via `adb install -r`
+            - **Apple TV:** build from source in Xcode (`appletv/TVMaestro.xcodeproj`) — device install requires your Apple Developer signing
+            - **Web UI:** included in the Docker/server image; `tvmaestro-web-*.zip` is the static build only
+
+            Apple TV clients prefer **HLS** stream URLs from Channels DVR (`format=hls`).
