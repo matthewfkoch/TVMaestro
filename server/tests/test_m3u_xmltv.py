@@ -5,9 +5,9 @@ from tvmaestro.xmltv import parse_xmltv, parse_xmltv_time
 SAMPLE_M3U = """
 #EXTM3U
 #EXTINF:-1 tvg-id="espn.us" tvg-chno="206" tvg-logo="http://example/espn.png" group-title="Sports" tvc-guide-stationid="12345",ESPN
-http://192.168.1.17:8089/devices/ANY/channels/206/stream.ts?codec=copy
+http://dvr.example/devices/ANY/channels/206/stream.ts?codec=copy
 #EXTINF:-1 tvg-chno="5",Local 5
-http://192.168.1.17:8089/devices/ANY/channels/5/stream.ts
+http://dvr.example/devices/ANY/channels/5/stream.ts
 """
 
 SAMPLE_XMLTV = """<?xml version="1.0" encoding="UTF-8"?>

@@ -44,7 +44,7 @@ export default function AddDeviceModal({ open, onClose, onAdded }: Props) {
             <label>Host / IP</label>
             <input
               value={host}
-              placeholder="192.168.1.50"
+              placeholder="android-tv.local"
               onChange={(e) => setHost(e.target.value)}
             />
           </div>

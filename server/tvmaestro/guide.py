@@ -117,7 +117,10 @@ class GuideStore:
             await self._refresh_epg()
 
     async def _refresh_channels(self) -> None:
-        url = self.store.config.channels_dvr_m3u_url
+        url = self.store.config.channels_dvr_m3u_url.strip()
+        if not url:
+            logger.debug("Channels DVR M3U URL is not configured; skipping refresh")
+            return
         logger.info("Fetching M3U %s", url)
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
             resp = await client.get(url)
@@ -130,7 +133,10 @@ class GuideStore:
         self.last_error = None
 
     async def _refresh_epg(self) -> None:
-        url = self.store.config.channels_dvr_xmltv_url
+        url = self.store.config.channels_dvr_xmltv_url.strip()
+        if not url:
+            logger.debug("Channels DVR XMLTV URL is not configured; skipping refresh")
+            return
         logger.info("Fetching XMLTV %s", url)
         async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client:
             resp = await client.get(url)

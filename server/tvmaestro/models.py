@@ -9,12 +9,8 @@ from pydantic import BaseModel, Field
 
 
 class AppConfig(BaseModel):
-    channels_dvr_m3u_url: str = (
-        "http://192.168.1.17:8089/devices/ANY/channels.m3u?format=ts&codec=copy"
-    )
-    channels_dvr_xmltv_url: str = (
-        "http://192.168.1.17:8089/devices/ANY/guide/xmltv?duration=1209600"
-    )
+    channels_dvr_m3u_url: str = ""
+    channels_dvr_xmltv_url: str = ""
     m3u_refresh_seconds: int = 300
     xmltv_refresh_seconds: int = 900
     # Reserved — not enforced by the API yet. Empty means open LAN control plane.

@@ -34,7 +34,7 @@ object ServerCec {
     ): String {
         val base = Prefs.serverUrl(context)
         if (base.isBlank()) {
-            return "Set TVMaestro server URL first (e.g. http://192.168.1.10:6790)"
+            return "Set TVMaestro server URL first (e.g. http://tvmaestro.local:6790)"
         }
         val host = localIpv4()
             ?: return "Could not determine this device's LAN IP"

@@ -20,8 +20,15 @@ def test_config_get_redacts_empty_secrets(client: TestClient):
     resp = client.get("/api/config")
     assert resp.status_code == 200
     body = resp.json()
-    assert "channels_dvr_m3u_url" in body
+    assert body["channels_dvr_m3u_url"] == ""
+    assert body["channels_dvr_xmltv_url"] == ""
     assert body["client_auth_token"] == ""
+
+
+def test_refresh_skips_unconfigured_guide_urls(client: TestClient):
+    resp = client.post("/api/refresh")
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
 
 
 def test_list_sessions_empty(client: TestClient):

@@ -6,7 +6,7 @@
     <string name="port_label">Control API port</string>
     <string name="token_label">API token (optional)</string>
     <string name="server_url_label">TVMaestro server URL (for Wake/Sleep)</string>
-    <string name="server_url_hint">http://192.168.1.10:6790</string>
+    <string name="server_url_hint">http://tvmaestro.local:6790</string>
     <string name="test_wake">Test wake</string>
     <string name="test_sleep">Test sleep</string>
     <string name="test_cec">Test volume up</string>

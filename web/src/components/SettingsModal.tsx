@@ -58,6 +58,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
               <label>Channels DVR M3U URL</label>
               <input
                 value={cfg.channels_dvr_m3u_url}
+                placeholder="http://channels-dvr.local:8089/devices/ANY/channels.m3u?format=ts&codec=copy"
                 onChange={(e) => setCfg({ ...cfg, channels_dvr_m3u_url: e.target.value })}
               />
             </div>
@@ -65,6 +66,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
               <label>Channels DVR XMLTV URL</label>
               <input
                 value={cfg.channels_dvr_xmltv_url}
+                placeholder="http://channels-dvr.local:8089/devices/ANY/guide/xmltv?duration=1209600"
                 onChange={(e) => setCfg({ ...cfg, channels_dvr_xmltv_url: e.target.value })}
               />
             </div>
@@ -72,7 +74,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
               <label>APITuner base URL (YouTube)</label>
               <input
                 value={cfg.apituner_base_url}
-                placeholder="http://192.168.1.x:6592"
+                placeholder="http://apituner.local:6592"
                 onChange={(e) => setCfg({ ...cfg, apituner_base_url: e.target.value })}
               />
             </div>

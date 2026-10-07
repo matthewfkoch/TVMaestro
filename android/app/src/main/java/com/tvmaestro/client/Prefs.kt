@@ -22,7 +22,7 @@ object Prefs {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit().putString(KEY_TOKEN, token).apply()
     }
 
-    /** Base URL of the TVMaestro server, e.g. http://192.168.1.10:6790 */
+    /** Base URL of the TVMaestro server, e.g. http://tvmaestro.local:6790 */
     fun serverUrl(context: Context): String =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(KEY_SERVER_URL, "") ?: ""
 

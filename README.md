@@ -49,10 +49,10 @@ Open `http://<host>:6790`. Config is auto-seeded into `data/` on first run (`con
 docker compose up -d --build --pull never
 ```
 
-Default DVR URLs (edit in **Settings** or `data/config.json` — replace with your Channels DVR host):
+Channels DVR URLs are blank by default. Configure them in **Settings** or `data/config.json` using your Channels DVR hostname:
 
-- `http://192.168.1.17:8089/devices/ANY/channels.m3u?format=ts&codec=copy`
-- `http://192.168.1.17:8089/devices/ANY/guide/xmltv?duration=1209600`
+- `http://channels-dvr.local:8089/devices/ANY/channels.m3u?format=ts&codec=copy`
+- `http://channels-dvr.local:8089/devices/ANY/guide/xmltv?duration=1209600`
 
 If Channels DVR is offline at startup, the server still boots and serves any disk cache until refresh succeeds.
 

@@ -19,7 +19,7 @@ final class ControlServer {
 
     static let multiviewMax = 4
     static let versionName =
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.3.0"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.3.1"
 
     init(
         port: UInt16,
