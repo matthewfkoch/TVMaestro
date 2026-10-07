@@ -187,11 +187,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <Logo className="brand-mark" size={28} />
-          <div className="brand-text">
-            <h1>TVMaestro</h1>
-            <span>Guide control</span>
-          </div>
+          <Logo className="brand-mark" />
         </div>
         <div className="topbar-actions">
           {status && (
@@ -275,6 +271,7 @@ export default function App() {
         {multiviewOpen && (
           <MultiviewComposer
             channels={channels}
+            programmes={programmes}
             devices={devices}
             deviceId={selectedDeviceId}
             layout={mvLayout}

@@ -1,5 +1,6 @@
 import type { Channel, Device, Programme } from "../api";
 import { streamCompatWarning } from "../streamCompat";
+import ProgramArt from "./ProgramArt";
 
 type Props = {
   channel: Channel;
@@ -36,18 +37,23 @@ export default function TuneSheet({
     <>
       <button type="button" className="sheet-backdrop" aria-label="Close" onClick={onClose} />
       <aside className="sheet">
-        <header>
-          <div>
-            <h2>{programme?.title || channel.name}</h2>
-            <p>
-              {channel.number ? `${channel.number} · ` : ""}
-              {channel.name}
-              {programme?.subtitle ? ` · ${programme.subtitle}` : ""}
-            </p>
+        <header className={programme?.icon ? "has-art" : undefined}>
+          {programme?.icon && (
+            <ProgramArt src={programme.icon} width={720} height={540} className="sheet-art" />
+          )}
+          <div className="sheet-head-row">
+            <div>
+              <h2>{programme?.title || channel.name}</h2>
+              <p>
+                {channel.number ? `${channel.number} · ` : ""}
+                {channel.name}
+                {programme?.subtitle ? ` · ${programme.subtitle}` : ""}
+              </p>
+            </div>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
+              Close
+            </button>
           </div>
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Close
-          </button>
         </header>
         <div className="sheet-body">
           {programme?.description && <p style={{ margin: 0, color: "var(--text-dim)" }}>{programme.description}</p>}

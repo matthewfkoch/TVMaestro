@@ -88,30 +88,9 @@ button {
 }
 
 .brand-mark {
-  flex-shrink: 0;
-  color: var(--accent);
-}
-
-.brand-text {
-  display: flex;
-  align-items: baseline;
-  gap: 0.65rem;
-  min-width: 0;
-}
-
-.brand h1 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-.brand span {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  display: block;
+  height: 26px;
+  width: auto;
 }
 
 .topbar-actions {
@@ -295,14 +274,32 @@ button {
   position: absolute;
   top: 6px;
   bottom: 6px;
-  padding: 0.4rem 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.45rem;
   border-radius: 7px;
   background: linear-gradient(180deg, #314258 0%, var(--programme) 100%);
   border: 1px solid rgba(255, 255, 255, 0.06);
   overflow: hidden;
   cursor: pointer;
+  text-align: left;
   transition: background 140ms ease, transform 140ms ease, box-shadow 140ms ease;
   animation: progIn 220ms ease both;
+}
+
+.programme-art {
+  width: 44px;
+  height: 33px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex: none;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.programme-copy {
+  min-width: 0;
+  flex: 1;
 }
 
 .programme:hover {
@@ -439,6 +436,34 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
+.sheet header.has-art {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sheet-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+.sheet header.has-art .sheet-head-row {
+  padding: 0.9rem 1.2rem 1rem;
+}
+
+.sheet-art {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  background: var(--bg0);
+}
+
 .sheet header h2 {
   margin: 0;
   font-size: 1.1rem;
@@ -559,6 +584,120 @@ button {
   font-style: italic;
 }
 
+.channel-picker {
+  min-width: 0;
+  position: relative;
+}
+
+.channel-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 42px;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  background: var(--bg1);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+}
+
+.channel-picker-btn.empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.channel-picker-btn:hover,
+.channel-option:hover {
+  background: var(--bg3);
+}
+
+.channel-picker-copy,
+.channel-option-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.channel-picker-name,
+.channel-option-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  font-style: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-picker-show,
+.channel-option-show {
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: var(--text-dim);
+  font-style: normal;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-art {
+  width: 48px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex: none;
+  background: var(--bg0);
+}
+
+.program-art-fallback.channel-art {
+  display: block;
+  background: var(--bg3);
+}
+
+.channel-picker-menu {
+  margin-top: 0.35rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--bg1);
+  overflow: hidden;
+}
+
+.channel-picker-menu input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg0);
+  padding: 0.55rem 0.65rem;
+  outline: none;
+}
+
+.channel-picker-list {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.channel-option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.channel-option.selected {
+  background: var(--accent-dim);
+}
+
+.channel-option-empty {
+  padding: 0.7rem 0.65rem;
+  color: var(--text-faint);
+  font-size: 0.8rem;
+}
+
 .modal-center {
   position: absolute;
   inset: 0;
@@ -649,8 +788,8 @@ button {
     --hour-w: 200px;
   }
 
-  .brand span {
-    display: none;
+  .brand-mark {
+    height: 18px;
   }
 
   .device-cec {

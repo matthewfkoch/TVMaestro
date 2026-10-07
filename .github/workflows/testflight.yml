@@ -19,31 +19,46 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check TestFlight secrets
+        id: asc
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [[ -z "$ASC_KEY_ID" || -z "$ASC_ISSUER_ID" || -z "$ASC_PRIVATE_KEY" || -z "$APPLE_TEAM_ID" ]]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::TestFlight secrets are not configured; skipping upload"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: ruby/setup-ruby@v1
+        if: steps.asc.outputs.enabled == 'true'
         with:
           ruby-version: "3.3"
           bundler-cache: true
           working-directory: appletv
 
       - name: Install Fastlane
+        if: steps.asc.outputs.enabled == 'true'
         run: bundle install
 
       - name: Configure App Store Connect API key
+        if: steps.asc.outputs.enabled == 'true'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
-          if [[ -z "$ASC_KEY_ID" || -z "$ASC_ISSUER_ID" || -z "$ASC_PRIVATE_KEY" ]]; then
-            echo "::error::Add GitHub secrets ASC_KEY_ID, ASC_ISSUER_ID, and ASC_PRIVATE_KEY"
-            exit 1
-          fi
           mkdir -p "$HOME/private_keys"
           KEY_PATH="$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
           printf '%s' "$ASC_PRIVATE_KEY" > "$KEY_PATH"
           echo "ASC_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
       - name: Upload to TestFlight
+        if: steps.asc.outputs.enabled == 'true'
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}

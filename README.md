@@ -18,12 +18,36 @@ Media plane: the client pulls stream URLs directly from Channels (or APITuner).
 
 ## Quick start (Docker)
 
+### From GitHub Container Registry (releases)
+
 ```bash
-cp config.example.json data/config.json   # optional; auto-seeded on first run
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-Open `http://<host>:6790`.
+Or without Compose:
+
+```bash
+mkdir -p data
+docker run -d \
+  --pull always \
+  --name tvmaestro \
+  -p 6790:6790 \
+  -v "$(pwd)/data:/data" \
+  -v "$HOME/.android:/root/.android:ro" \
+  --restart unless-stopped \
+  ghcr.io/matthewfkoch/tvmaestro:latest
+```
+
+`docker compose up -d` pulls `ghcr.io/matthewfkoch/tvmaestro:latest` before it starts. `docker run` needs `--pull always`, or an image already on disk is reused.
+
+Open `http://<host>:6790`. Config is auto-seeded into `data/` on first run (`config.example.json` is optional).
+
+### Build locally
+
+```bash
+docker compose up -d --build --pull never
+```
 
 Default DVR URLs (edit in **Settings** or `data/config.json` — replace with your Channels DVR host):
 
@@ -82,14 +106,24 @@ scripts/build-all.sh
 
 ### Releases
 
-Push a version tag to publish installable assets:
+Tagged releases (`v*`) trigger `.github/workflows/release.yml`, which:
+
+1. Runs the server tests, then publishes a multi-arch image (`linux/amd64` + `linux/arm64`) to GitHub Container Registry: `ghcr.io/matthewfkoch/tvmaestro:<version>` and `:latest`
+2. Builds the Android TV APK and attaches it to a [GitHub Release](https://github.com/matthewfkoch/TVMaestro/releases) on this repo
+3. Uploads the Apple TV build to TestFlight when `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID` are set (otherwise that job skips)
+
+A manual run of the Release workflow (no tag) publishes `:dev` only. Do not retag a version that already shipped.
+
+If the package is still private (the default when the repo started private), open **Packages → tvmaestro → Package settings**, link it to this repo, and set visibility to **Public** so `docker pull` works without a GitHub login. The repo itself also has to be public for people to download the APK from Releases.
+
+Bump `server/tvmaestro/__version__.py` and the Android `versionName` / `versionCode`, then:
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
-GitHub Actions uploads the **Android APK** and **web dist zip** to the [Releases](https://github.com/matthewfkoch/TVMaestro/releases) page. **Apple TV TestFlight** uploads on the same tag via `.github/workflows/testflight.yml` (after GitHub secrets are configured — see `appletv/README.md`).
+**Signing:** the release APK uses the same keystore as APITuner (alias `apituner`), stored as the same four repository secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. Do not generate a new keystore. DisplayLauncher has its own key and is not shared. Upgrades install over a previous TVMaestro release only when both APKs use this key. If those secrets are missing, the workflow attaches a debug APK (`tvmaestro-android-<version>-debug.apk`) instead.
 
 ### Apple TV client
 

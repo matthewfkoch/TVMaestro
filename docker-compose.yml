@@ -1,9 +1,11 @@
 services:
   tvmaestro:
+    # Always pull the published image. Local builds must pass --pull never.
+    image: ghcr.io/matthewfkoch/tvmaestro:latest
+    pull_policy: always
     build:
       context: .
       dockerfile: server/Dockerfile
-    image: tvmaestro:latest
     container_name: tvmaestro
     ports:
       - "6790:6790"

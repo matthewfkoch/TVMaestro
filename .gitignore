@@ -20,6 +20,7 @@ server/tvmaestro/web/*
 server/.venv/
 *.apk
 *.keystore
+*.jks
 local.properties
 .gradle/
 android/.gradle/

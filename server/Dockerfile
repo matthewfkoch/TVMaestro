@@ -26,6 +26,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server/tvmaestro ./tvmaestro
 COPY config.example.json /app/config.example.json
+# Drop any stale hashed bundles that arrived with the Python package, then
+# install the web image built above.
+RUN rm -rf ./tvmaestro/web
 COPY --from=web /web/dist ./tvmaestro/web
 
 VOLUME ["/data"]

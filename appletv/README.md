@@ -76,4 +76,4 @@ Prefer HLS playlists (`format=hls`). Raw MPEG-TS is unreliable on `AVPlayer`. Th
 
 ## Version
 
-0.2.0
+0.3.0
