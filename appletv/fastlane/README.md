@@ -21,7 +21,7 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 [bundle exec] fastlane tvos setup
 ```
 
-Register bundle ID + App Store Connect app (one-time, same Apple account as BSI/EAS)
+Register bundle ID + App Store Connect app (one-time)
 
 ### tvos beta
 
@@ -29,7 +29,7 @@ Register bundle ID + App Store Connect app (one-time, same Apple account as BSI/
 [bundle exec] fastlane tvos beta
 ```
 
-Build Release and upload to TestFlight (like: eas build --auto-submit)
+Build Release and upload to TestFlight
 
 ### tvos build
 
@@ -38,6 +38,14 @@ Build Release and upload to TestFlight (like: eas build --auto-submit)
 ```
 
 Build App Store IPA locally (no upload)
+
+### tvos metadata
+
+```sh
+[bundle exec] fastlane tvos metadata
+```
+
+Upload tvOS App Store listing only (no binary, no review submission)
 
 ----
 

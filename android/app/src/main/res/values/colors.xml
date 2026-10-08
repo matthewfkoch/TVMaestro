@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bg">#0E1218</color>
-    <color name="accent">#3ECF8E</color>
+    <color name="panel">#151B24</color>
     <color name="text">#E8EEF6</color>
+    <color name="text_dim">#8B9BB0</color>
+    <color name="text_faint">#5D6D82</color>
+    <color name="accent">#3ECF8E</color>
+    <color name="accent_dim">#263ECF8E</color>
+    <color name="accent_on">#062016</color>
+    <color name="warn">#F0B35A</color>
+    <color name="danger">#EF6B6B</color>
+    <color name="stroke">#14E8EEF6</color>
+    <color name="stroke_strong">#29E8EEF6</color>
+    <color name="empty_pane">#0AFFFFFF</color>
+    <color name="hairline">#1FFFFFFF</color>
+    <color name="scrim">#B8000000</color>
 </resources>

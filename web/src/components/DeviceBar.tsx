@@ -1,5 +1,6 @@
+import { useState } from "react";
 import type { Device, Session } from "../api";
-import { devicePrefersHls } from "../streamCompat";
+import { isAppleTvDevice } from "../streamCompat";
 
 type Props = {
   devices: Device[];
@@ -9,6 +10,7 @@ type Props = {
   onEdit: (id: string) => void;
   onCec: (id: string, action: string) => void;
   onStop: (sessionId: string) => void;
+  onLaunch: (id: string) => Promise<void>;
   onAdd: () => void;
 };
 
@@ -20,10 +22,32 @@ export default function DeviceBar({
   onEdit,
   onCec,
   onStop,
+  onLaunch,
   onAdd,
 }: Props) {
+  const [launchingId, setLaunchingId] = useState<string | null>(null);
+  const [launchNote, setLaunchNote] = useState<string | null>(null);
+
+  async function launch(device: Device) {
+    setLaunchingId(device.id);
+    setLaunchNote(null);
+    try {
+      await onLaunch(device.id);
+      setLaunchNote(`Opened TVMaestro on ${device.name}`);
+    } catch (e) {
+      setLaunchNote(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLaunchingId(null);
+    }
+  }
+
   return (
     <footer className="device-bar">
+      {launchNote && (
+        <span className="pill" title={launchNote} style={{ maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis" }}>
+          {launchNote}
+        </span>
+      )}
       {devices.length === 0 && (
         <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
           No devices registered yet.
@@ -52,11 +76,6 @@ export default function DeviceBar({
             {mvMax <= 1 && (
               <span className="pill warn" title={d.capabilities?.chip_note || "Multiview not supported"}>
                 single
-              </span>
-            )}
-            {devicePrefersHls(d) && (
-              <span className="pill" title="Prefers HLS streams (MPEG-TS may fail)">
-                HLS
               </span>
             )}
             {session && session.status === "error" && (
@@ -90,6 +109,20 @@ export default function DeviceBar({
             >
               Edit
             </button>
+            {isAppleTvDevice(d) && (
+              <button
+                type="button"
+                className="btn"
+                title="Open the TVMaestro app on this Apple TV"
+                disabled={launchingId === d.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void launch(d);
+                }}
+              >
+                {launchingId === d.id ? "Opening…" : "Open"}
+              </button>
+            )}
             <div className="device-cec" onClick={(e) => e.stopPropagation()}>
               {cec?.power ? (
                 <>

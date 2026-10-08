@@ -7,3 +7,4 @@ pydantic==2.13.4
 python-multipart==0.0.20
 defusedxml==0.7.1
 androidtvremote2==0.3.1
+pyatv==0.18.0

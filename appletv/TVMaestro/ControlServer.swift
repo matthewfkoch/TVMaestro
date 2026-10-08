@@ -5,6 +5,7 @@ enum ControlEvent {
     case session(PlaybackSession, warning: String?)
     case stopped
     case failed(String)
+    case guide(registered: Bool, paired: Bool)
 }
 
 /// Android-compatible control plane on the LAN.
@@ -17,9 +18,9 @@ final class ControlServer {
     private let lock = NSLock()
     private var current: PlaybackSession?
 
-    static let multiviewMax = 4
+    static let multiviewMax = 9
     static let versionName =
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.3.1"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.4.0"
 
     init(
         port: UInt16,
@@ -49,6 +50,18 @@ final class ControlServer {
         http = nil
     }
 
+    var isListening: Bool { http?.isListening ?? false }
+
+    /// Rebind the listener after tvOS suspends the process. Keeps the current session.
+    /// A listener that is already accepting connections is left alone — cancelling it
+    /// and binding again races the old socket and fails with "address already in use".
+    func restartListening() throws {
+        if isListening { return }
+        http?.stop()
+        http = nil
+        try start()
+    }
+
     /// Clears the in-memory session from the UI (Menu remote) without requiring a LAN round-trip.
     func clearSessionLocally() {
         lock.lock()
@@ -76,6 +89,8 @@ final class ControlServer {
             return stopSession()
         case ("POST", "/api/cec"):
             return handleCec(body)
+        case ("POST", "/api/guide"):
+            return setGuide(body)
         default:
             return (404, Data("Not Found".utf8), "text/plain")
         }
@@ -102,13 +117,13 @@ final class ControlServer {
             "platform": "tvos",
             "capabilities": [
                 "multiview_max": Self.multiviewMax,
-                "layouts": ["1", "2x1", "1x2", "2x2"],
-                "mpeg_ts": false,
+                "layouts": ["1", "2x1", "1x2", "2x2", "3x3"],
+                "mpeg_ts": true,
                 "hls": true,
                 "weak_decoder": false,
                 "chip_family": "apple",
                 "platform": "tvos",
-                "chip_note": "Prefer HLS from Channels DVR; MPEG-TS is rewritten toward format=hls when possible",
+                "chip_note": "Plays the original MPEG-TS stream, including MPEG-2, without transcoding",
                 "cec": audio.capabilities(),
             ],
         ]
@@ -126,22 +141,8 @@ final class ControlServer {
 
     private func setSession(_ body: Data) -> (Int, Data, String) {
         let decoder = JSONDecoder()
-        guard var incoming = try? decoder.decode(PlaybackSession.self, from: body) else {
+        guard let incoming = try? decoder.decode(PlaybackSession.self, from: body) else {
             return Self.json(400, ["success": false, "message": "Invalid JSON"])
-        }
-
-        // Rewrite obvious MPEG-TS Channels URLs toward HLS for AVPlayer.
-        var rewritten = false
-        incoming.slots = incoming.slots.map { slot in
-            guard let url = slot.url, StreamURL.looksLikeMpegTS(url) else { return slot }
-            let next = StreamURL.preferHLS(url)
-            if next != url {
-                rewritten = true
-                var copy = slot
-                copy.url = next
-                return copy
-            }
-            return slot
         }
 
         let playable = incoming.slots.filter(\.isPlayable)
@@ -154,17 +155,6 @@ final class ControlServer {
                 "message": "This device supports at most \(Self.multiviewMax) simultaneous stream(s)",
                 "multiview_max": Self.multiviewMax,
             ])
-        }
-
-        let stillTS = playable.contains { slot in
-            guard let url = slot.url else { return false }
-            return StreamURL.looksLikeMpegTS(url)
-        }
-        var warning: String?
-        if stillTS {
-            warning = "One or more streams look like MPEG-TS; Apple TV works best with HLS"
-        } else if rewritten {
-            warning = "Rewrote MPEG-TS URLs to HLS for AVPlayer"
         }
 
         let capacity = LayoutGeometry.capacity(incoming.layout)
@@ -189,14 +179,11 @@ final class ControlServer {
         lock.lock()
         current = session
         lock.unlock()
-        onEvent(.session(session, warning: warning))
+        onEvent(.session(session, warning: nil))
 
         var payload: [String: Any] = ["success": true]
         if let obj = Self.asJSONObject(session) {
             payload["session"] = obj
-        }
-        if let warning {
-            payload["message"] = warning
         }
         return Self.json(200, payload)
     }
@@ -206,6 +193,16 @@ final class ControlServer {
         current = nil
         lock.unlock()
         onEvent(.stopped)
+        return Self.json(200, ["success": true])
+    }
+
+    private func setGuide(_ body: Data) -> (Int, Data, String) {
+        struct GuideBody: Decodable {
+            var registered: Bool?
+            var paired: Bool?
+        }
+        let decoded = try? JSONDecoder().decode(GuideBody.self, from: body)
+        onEvent(.guide(registered: decoded?.registered ?? true, paired: decoded?.paired ?? false))
         return Self.json(200, ["success": true])
     }
 

@@ -561,6 +561,9 @@ button {
 .layout-card.l2x2 {
   grid-template: 1fr 1fr / 1fr 1fr;
 }
+.layout-card.l3x3 {
+  grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr;
+}
 
 .slot-list {
   display: flex;

@@ -201,8 +201,8 @@ jobs:
           fi
 
           yes | "$SDKMANAGER" --licenses >/dev/null
-          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
-          test -d "${ANDROID_HOME}/platforms/android-35"
+          "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0"
+          test -d "${ANDROID_HOME}/platforms/android-36"
 
       - name: Prepare release keystore
         id: signing
@@ -327,4 +327,4 @@ jobs:
 
             ## Apple TV
 
-            TestFlight, or build `appletv/TVMaestro.xcodeproj` in Xcode. Prefer HLS stream URLs from Channels DVR.
+            TestFlight, or build `appletv/TVMaestro.xcodeproj` in Xcode. The app plays the original MPEG-TS stream from Channels DVR.

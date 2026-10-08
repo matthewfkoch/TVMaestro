@@ -7,37 +7,40 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift */; };
-		97595C8FC2474CAF91247F8B /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7595C8FC2474CAF91247F8B /* AppModel.swift */; };
-		E80D4FB721344656845DACED /* SessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80D4FB721344656845DACED /* SessionModels.swift */; };
-		98E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */; };
-		D8A25408A65C482588B3A7D9 /* ControlServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8A25408A65C482588B3A7D9 /* ControlServer.swift */; };
-		390A4C9A15474D09B707126A /* LocalIP.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90A4C9A15474D09B707126A /* LocalIP.swift */; };
 		331252BCA8584220A7A13828 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31252BCA8584220A7A13828 /* ContentView.swift */; };
+		390A4C9A15474D09B707126A /* LocalIP.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90A4C9A15474D09B707126A /* LocalIP.swift */; };
+		3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */; };
 		727D49460AA34EABA9A1754A /* PlayerGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A27D49460AA34EABA9A1754A /* PlayerGridView.swift */; };
 		9105B19D34F94B059B9942A7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A105B19D34F94B059B9942A7 /* SettingsView.swift */; };
+		97595C8FC2474CAF91247F8B /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7595C8FC2474CAF91247F8B /* AppModel.swift */; };
+		98E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */; };
 		B1A11E4E01A2B3C4D5E6F701 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A11E4E01A2B3C4D5E6F701 /* Theme.swift */; };
 		B1A22D10A1A2B3C4D5E6F702 /* AudioController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A22D10A1A2B3C4D5E6F702 /* AudioController.swift */; };
-		B1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift */; };
-		3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */; };
+		C4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift */; };
+		D8A25408A65C482588B3A7D9 /* ControlServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8A25408A65C482588B3A7D9 /* ControlServer.swift */; };
+		E80D4FB721344656845DACED /* SessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80D4FB721344656845DACED /* SessionModels.swift */; };
+		C0FFEE01A1A2B3C4D5E6F001 /* KSPlayer in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE01A1A2B3C4D5E6F011 /* KSPlayer */; };
+		C0FFEE01A1A2B3C4D5E6F002 /* KSPlayerUI in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE01A1A2B3C4D5E6F012 /* KSPlayerUI */; };
+		C0FFEE01A1A2B3C4D5E6F003 /* FFmpegKit in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE01A1A2B3C4D5E6F013 /* FFmpegKit */; };
+		F11A7C3E9B2D4A6081C5D7E3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F11A7C3E9B2D4A6081C5D7E2 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		17898D92FE8148ECB0AC5FCC /* TVMaestro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TVMaestro.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVMaestroApp.swift; sourceTree = "<group>"; };
-		A7595C8FC2474CAF91247F8B /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
-		A80D4FB721344656845DACED /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
-		A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinyHTTPServer.swift; sourceTree = "<group>"; };
-		A8A25408A65C482588B3A7D9 /* ControlServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlServer.swift; sourceTree = "<group>"; };
-		A90A4C9A15474D09B707126A /* LocalIP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalIP.swift; sourceTree = "<group>"; };
-		A31252BCA8584220A7A13828 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A27D49460AA34EABA9A1754A /* PlayerGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerGridView.swift; sourceTree = "<group>"; };
 		A105B19D34F94B059B9942A7 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1A11E4E01A2B3C4D5E6F701 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		A1A22D10A1A2B3C4D5E6F702 /* AudioController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioController.swift; sourceTree = "<group>"; };
-		A1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamURL.swift; sourceTree = "<group>"; };
+		A27D49460AA34EABA9A1754A /* PlayerGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerGridView.swift; sourceTree = "<group>"; };
+		A31252BCA8584220A7A13828 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A4C56AF3775B4D7BAF5C9956 /* TVMaestroApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVMaestroApp.swift; sourceTree = "<group>"; };
 		A52231E8CF9744FCD8DB28280 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A7595C8FC2474CAF91247F8B /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		A80D4FB721344656845DACED /* SessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionModels.swift; sourceTree = "<group>"; };
+		A8A25408A65C482588B3A7D9 /* ControlServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlServer.swift; sourceTree = "<group>"; };
+		A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinyHTTPServer.swift; sourceTree = "<group>"; };
+		A90A4C9A15474D09B707126A /* LocalIP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalIP.swift; sourceTree = "<group>"; };
+		F11A7C3E9B2D4A6081C5D7E2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -45,6 +48,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE01A1A2B3C4D5E6F001 /* KSPlayer in Frameworks */,
+				C0FFEE01A1A2B3C4D5E6F002 /* KSPlayerUI in Frameworks */,
+				C0FFEE01A1A2B3C4D5E6F003 /* FFmpegKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -66,7 +72,6 @@
 				A7595C8FC2474CAF91247F8B /* AppModel.swift */,
 				A1A11E4E01A2B3C4D5E6F701 /* Theme.swift */,
 				A1A22D10A1A2B3C4D5E6F702 /* AudioController.swift */,
-				A1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift */,
 				A80D4FB721344656845DACED /* SessionModels.swift */,
 				A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */,
 				A8A25408A65C482588B3A7D9 /* ControlServer.swift */,
@@ -76,6 +81,7 @@
 				A105B19D34F94B059B9942A7 /* SettingsView.swift */,
 				A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */,
 				A52231E8CF9744FCD8DB28280 /* Info.plist */,
+				F11A7C3E9B2D4A6081C5D7E2 /* PrivacyInfo.xcprivacy */,
 			);
 			path = TVMaestro;
 			sourceTree = "<group>";
@@ -104,6 +110,11 @@
 			dependencies = (
 			);
 			name = TVMaestro;
+			packageProductDependencies = (
+				C0FFEE01A1A2B3C4D5E6F011 /* KSPlayer */,
+				C0FFEE01A1A2B3C4D5E6F012 /* KSPlayerUI */,
+				C0FFEE01A1A2B3C4D5E6F013 /* FFmpegKit */,
+			);
 			productName = TVMaestro;
 			productReference = 17898D92FE8148ECB0AC5FCC /* TVMaestro.app */;
 			productType = "com.apple.product-type.application";
@@ -116,7 +127,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1600;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					230E8358F7D84522A80D71FB = {
 						DevelopmentTeam = 943233CF93;
@@ -133,6 +144,10 @@
 				Base,
 			);
 			mainGroup = B00000000000000000000001;
+			packageReferences = (
+				C0FFEE01A1A2B3C4D5E6F010 /* XCRemoteSwiftPackageReference "KSPlayer" */,
+				C0FFEE01A1A2B3C4D5E6F014 /* XCRemoteSwiftPackageReference "FFmpegKit" */,
+			);
 			productRefGroup = B00000000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -148,6 +163,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets in Resources */,
+				F11A7C3E9B2D4A6081C5D7E3 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -162,7 +178,6 @@
 				97595C8FC2474CAF91247F8B /* AppModel.swift in Sources */,
 				B1A11E4E01A2B3C4D5E6F701 /* Theme.swift in Sources */,
 				B1A22D10A1A2B3C4D5E6F702 /* AudioController.swift in Sources */,
-				B1A33F20A1A2B3C4D5E6F703 /* StreamURL.swift in Sources */,
 				E80D4FB721344656845DACED /* SessionModels.swift in Sources */,
 				98E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift in Sources */,
 				D8A25408A65C482588B3A7D9 /* ControlServer.swift in Sources */,
@@ -182,14 +197,43 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 943233CF93;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				TVOS_DEPLOYMENT_TARGET = 17.0;
@@ -202,10 +246,39 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 943233CF93;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				TVOS_DEPLOYMENT_TARGET = 17.0;
 				VALIDATE_PRODUCT = YES;
@@ -218,8 +291,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
-				DEVELOPMENT_TEAM = 943233CF93;
+				CURRENT_PROJECT_VERSION = 16;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TVMaestro/Info.plist;
@@ -227,7 +299,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.1;
+				MARKETING_VERSION = 0.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tvmaestro.client;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
@@ -245,8 +317,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
-				DEVELOPMENT_TEAM = 943233CF93;
+				CURRENT_PROJECT_VERSION = 16;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TVMaestro/Info.plist;
@@ -254,7 +325,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3.1;
+				MARKETING_VERSION = 0.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.tvmaestro.client;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
@@ -288,6 +359,43 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C0FFEE01A1A2B3C4D5E6F010 /* XCRemoteSwiftPackageReference "KSPlayer" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kingslay/KSPlayer.git";
+			requirement = {
+				kind = revision;
+				revision = eae53303150f8133b1c5ee7e21bb6da0b0814cb8;
+			};
+		};
+		C0FFEE01A1A2B3C4D5E6F014 /* XCRemoteSwiftPackageReference "FFmpegKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kingslay/FFmpegKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C0FFEE01A1A2B3C4D5E6F011 /* KSPlayer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE01A1A2B3C4D5E6F010 /* XCRemoteSwiftPackageReference "KSPlayer" */;
+			productName = KSPlayer;
+		};
+		C0FFEE01A1A2B3C4D5E6F012 /* KSPlayerUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE01A1A2B3C4D5E6F010 /* XCRemoteSwiftPackageReference "KSPlayer" */;
+			productName = KSPlayerUI;
+		};
+		C0FFEE01A1A2B3C4D5E6F013 /* FFmpegKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE01A1A2B3C4D5E6F014 /* XCRemoteSwiftPackageReference "FFmpegKit" */;
+			productName = FFmpegKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = BF92237A0D614C599AAC858A /* Project object */;
 }

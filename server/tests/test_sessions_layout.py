@@ -7,6 +7,7 @@ def test_layout_capacity():
     assert LAYOUT_CAPACITY[Layout.two_h] == 2
     assert LAYOUT_CAPACITY[Layout.two_v] == 2
     assert LAYOUT_CAPACITY[Layout.quad] == 4
+    assert LAYOUT_CAPACITY[Layout.grid3] == 9
 
 
 def test_with_single_audio_skips_empty_panes():

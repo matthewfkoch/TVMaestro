@@ -10,8 +10,7 @@ import time
 import uuid
 from typing import Optional
 
-from . import client_proxy
-from . import androidtv_remote
+from . import androidtv_remote, appletv_remote, client_proxy
 from .config import data_dir
 from .models import CecCapabilities, Device, DeviceCapabilities, DeviceCreate, DeviceUpdate
 
@@ -131,6 +130,8 @@ class DeviceRegistry:
                     return None
                 self._devices[device_id] = snapshot
                 self._save()
+            if appletv_remote.is_apple_tv(snapshot):
+                await client_proxy.notify_guide_link(snapshot)
             return snapshot
         except Exception as exc:  # noqa: BLE001
             logger.debug("Device %s offline: %s", device_id, exc)
@@ -159,6 +160,19 @@ class DeviceRegistry:
             port=body.port,
             token=body.token,
         )
+        if body.platform == "tvos":
+            device.manufacturer = "Apple"
+            device.meta["platform"] = "tvos"
+            device.capabilities = DeviceCapabilities(
+                multiview_max=9,
+                layouts=["1", "2x1", "1x2", "2x2", "3x3"],
+                cec=CecCapabilities(power=False, volume=True, mute=True, method="player_gain"),
+                mpeg_ts=True,
+                hls=True,
+                weak_decoder=False,
+                chip_family="apple",
+                chip_note="Plays the original MPEG-TS stream, including MPEG-2, without transcoding",
+            )
         async with self._lock:
             self._devices[device_id] = device
             self._save()
@@ -184,4 +198,6 @@ class DeviceRegistry:
             del self._devices[device_id]
             self._save()
         androidtv_remote.clear_certs(device_id)
+        appletv_remote.clear_credentials(device_id)
+        await appletv_remote.remotes().drop(device_id)
         return True

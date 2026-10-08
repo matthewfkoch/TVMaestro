@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { api, type Device } from "../api";
-import { youtubeCompatWarning } from "../streamCompat";
 
 type Props = {
   open: boolean;
@@ -24,9 +23,6 @@ export default function YoutubeModal({ open, devices, deviceId, onClose, onPlaye
   }, [open, deviceId]);
 
   if (!open) return null;
-
-  const selectedDevice = devices.find((d) => d.id === selected) || null;
-  const hlsWarning = youtubeCompatWarning(selectedDevice);
 
   async function play() {
     setBusy(true);
@@ -54,8 +50,7 @@ export default function YoutubeModal({ open, devices, deviceId, onClose, onPlaye
       <div className="modal">
         <h2>Play via APITuner (YouTube)</h2>
         <p style={{ color: "var(--text-dim)", marginTop: 0 }}>
-          Resolves a YouTube URL through APITuner’s encoder relay into an MPEG-TS stream. Android
-          TV clients play this well; Apple TV generally needs HLS from Channels DVR.
+          Resolves a YouTube URL through APITuner’s encoder relay into an MPEG-TS stream and plays it on the selected TV.
         </p>
         <div style={{ display: "grid", gap: "0.75rem" }}>
           <div className="field">
@@ -84,19 +79,6 @@ export default function YoutubeModal({ open, devices, deviceId, onClose, onPlaye
             </select>
           </div>
         </div>
-        {hlsWarning && (
-          <div
-            className="error"
-            style={{
-              marginTop: "0.75rem",
-              background: "rgba(255, 180, 0, 0.12)",
-              borderColor: "rgba(255, 180, 0, 0.35)",
-              color: "var(--text)",
-            }}
-          >
-            {hlsWarning}
-          </div>
-        )}
         {error && <div className="error" style={{ marginTop: "0.75rem" }}>{error}</div>}
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>

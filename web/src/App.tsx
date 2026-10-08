@@ -306,6 +306,10 @@ export default function App() {
             .then(reload)
             .catch((e: Error) => setLoadError(e.message))
         }
+        onLaunch={async (id) => {
+          await api.launch(id);
+          await reload();
+        }}
         onAdd={() => setAddDeviceOpen(true)}
       />
 

@@ -16,13 +16,15 @@ WORKDIR /app
 
 # adb is required for CEC power on Shield/ATV: sideloaded apps cannot
 # inject SLEEP/WAKEUP with enough privilege for HdmiControlService.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends adb \
-    && rm -rf /var/lib/apt/lists/*
-
+# gcc/g++ compile pyatv's miniaudio on linux/arm64 (no published wheel) and
+# are purged in the same layer so they are not part of the runtime image.
 COPY server/requirements.txt .
-# Runtime deps only (pinned); pytest lives in requirements-dev.txt for CI/local.
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends adb gcc g++ \
+    && pip install --no-cache-dir -r requirements.txt \
+    && apt-get purge -y gcc g++ \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY server/tvmaestro ./tvmaestro
 COPY config.example.json /app/config.example.json

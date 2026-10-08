@@ -1,6 +1,5 @@
 {
   "bundleId": "com.tvmaestro.client",
   "appName": "TVMaestro",
-  "ascAppId": "6802899349",
-  "notes": "Same Apple Developer account as Big Stick Invitational. Create a tvOS app in App Store Connect, then paste the numeric Apple ID from App Information."
+  "ascAppId": "6802899349"
 }

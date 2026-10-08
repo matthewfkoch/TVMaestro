@@ -1,18 +1,23 @@
-"""HTTP client for TVMaestro Android endpoint APIs."""
+"""HTTP client for TVMaestro Android and Apple TV endpoint APIs."""
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import re
 import shutil
+import time
 from typing import Any, Optional
 
 import httpx
 
-from . import androidtv_remote
+from . import androidtv_remote, appletv_remote
 from .models import CecAction, Device, SessionState
 
 logger = logging.getLogger(__name__)
+
+_HTML_TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 
 
 def _headers(device: Device) -> dict[str, str]:
@@ -26,21 +31,134 @@ def _base(device: Device) -> str:
     return f"http://{device.host}:{device.port}"
 
 
+def _not_a_client(device: Device, body: str) -> str:
+    """Explain a 200 that is not the TVMaestro control API (often another app on the same port)."""
+    where = f"{device.name} ({device.host}:{device.port})"
+    match = _HTML_TITLE.search(body or "")
+    if match:
+        title = re.sub(r"\s+", " ", match.group(1)).strip()
+        if title:
+            return (
+                f"{where} is not running the TVMaestro client. "
+                f'Port {device.port} answered with "{title}". '
+                "Open TVMaestro on that device and set this device's port to the app's control port."
+            )
+    snippet = " ".join((body or "").split())[:80]
+    if snippet:
+        return (
+            f"{where} did not return JSON from the TVMaestro client "
+            f"(got: {snippet}). Open the TVMaestro app and confirm the port."
+        )
+    return (
+        f"{where} returned an empty response instead of the TVMaestro client API. "
+        "Open the TVMaestro app and confirm the port."
+    )
+
+
+def read_json(resp: httpx.Response, device: Device) -> Any:
+    resp.raise_for_status()
+    try:
+        return resp.json()
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(_not_a_client(device, resp.text)) from exc
+
+
 async def health(device: Device, timeout: float = 3.0) -> dict[str, Any]:
     async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.get(f"{_base(device)}/api/health", headers=_headers(device))
-        resp.raise_for_status()
-        return resp.json()
+        return read_json(resp, device)
 
 
 async def info(device: Device, timeout: float = 5.0) -> dict[str, Any]:
     async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.get(f"{_base(device)}/api/info", headers=_headers(device))
-        resp.raise_for_status()
-        return resp.json()
+        return read_json(resp, device)
+
+
+async def notify_guide_link(device: Device) -> None:
+    """Tell an Apple TV client whether the guide has registered and paired it."""
+    if not appletv_remote.is_apple_tv(device):
+        return
+    payload = {
+        "registered": True,
+        "paired": appletv_remote.has_credentials(device.id),
+        "name": device.name,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.post(
+                f"{_base(device)}/api/guide",
+                headers=_headers(device),
+                json=payload,
+            )
+            resp.raise_for_status()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Apple TV guide status not delivered to %s: %s", device.host, exc)
+
+
+async def _client_listening(device: Device, timeout: float = 1.5) -> bool:
+    """True when something answers the control port, including an auth challenge."""
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.get(f"{_base(device)}/api/health", headers=_headers(device))
+        return resp.status_code < 500
+    except Exception:  # noqa: BLE001
+        return False
+
+
+async def _wait_for_client(device: Device, timeout: float) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if await _client_listening(device, timeout=2):
+            return True
+        await asyncio.sleep(0.5)
+    return False
+
+
+async def ensure_appletv_running(device: Device) -> None:
+    """Launch the tvOS app when a tune arrives and the control API is down."""
+    if not appletv_remote.is_apple_tv(device):
+        return
+    if await _client_listening(device):
+        return
+    if not appletv_remote.has_credentials(device.id):
+        raise RuntimeError(
+            f"{device.name} is not running the TVMaestro app. "
+            "Pair the Apple TV in Edit device so the guide can open it, "
+            "or open TVMaestro with the Siri Remote."
+        )
+    try:
+        await appletv_remote.open_app(device)
+    except appletv_remote.RemoteNotPaired as exc:
+        raise RuntimeError(str(exc)) from exc
+    except appletv_remote.RemoteUnavailable as exc:
+        raise RuntimeError(str(exc)) from exc
+    if not await _wait_for_client(device, timeout=20):
+        raise RuntimeError(
+            f"TVMaestro was asked to open on {device.name}, but the app never started "
+            f"listening on port {device.port}. Confirm the app is installed and the Apple TV is awake."
+        )
+
+
+async def open_appletv_app(device: Device) -> None:
+    """Bring TVMaestro to the front, then wait until its control API answers."""
+    if not appletv_remote.is_apple_tv(device):
+        raise RuntimeError("Open app is only available for Apple TV")
+    try:
+        await appletv_remote.open_app(device)
+    except appletv_remote.RemoteNotPaired:
+        raise
+    except appletv_remote.RemoteUnavailable:
+        raise
+    if not await _wait_for_client(device, timeout=20):
+        raise RuntimeError(
+            f"TVMaestro was asked to open on {device.name}, but the app never started "
+            f"listening on port {device.port}. Confirm the app is installed and the Apple TV is awake."
+        )
 
 
 async def push_session(device: Device, session: SessionState, timeout: float = 15.0) -> dict[str, Any]:
+    await ensure_appletv_running(device)
     payload = {
         "id": session.id,
         "mode": session.mode,
@@ -61,8 +179,7 @@ async def push_session(device: Device, session: SessionState, timeout: float = 1
             headers=_headers(device),
             json=payload,
         )
-        resp.raise_for_status()
-        data = resp.json()
+        data = read_json(resp, device)
         if isinstance(data, dict) and data.get("success") is False:
             raise RuntimeError(data.get("message") or "Client rejected session")
         return data
@@ -75,15 +192,13 @@ async def stop_session(device: Device, timeout: float = 10.0) -> dict[str, Any]:
             headers=_headers(device),
             json={},
         )
-        resp.raise_for_status()
-        return resp.json()
+        return read_json(resp, device)
 
 
 async def get_session(device: Device, timeout: float = 5.0) -> Optional[dict[str, Any]]:
     async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.get(f"{_base(device)}/api/session", headers=_headers(device))
-        resp.raise_for_status()
-        return resp.json()
+        return read_json(resp, device)
 
 
 async def remote_power(device: Device, *, on: bool) -> bool:
@@ -138,8 +253,7 @@ async def cec(device: Device, action: CecAction, timeout: float = 5.0) -> dict[s
                 headers=_headers(device),
                 json={"action": action.value},
             )
-            resp.raise_for_status()
-            result = resp.json()
+            result = read_json(resp, device)
     except Exception as exc:  # noqa: BLE001
         result = {"success": False, "action": action.value, "message": str(exc)}
 

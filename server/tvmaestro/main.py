@@ -15,8 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__, client_proxy
-from . import androidtv_remote
+from . import __version__, androidtv_remote, appletv_remote, client_proxy
 from .apituner import ApiTunerClient, ApiTunerError
 from .config import ConfigStore
 from .devices import DeviceRegistry
@@ -194,8 +193,9 @@ async def delete_device(device_id: str):
     if not _devices().get(device_id):
         raise HTTPException(404, "Device not found")
     await _sessions().stop_device(device_id)
-    await _devices().delete(device_id)
     await androidtv_remote.remotes().drop(device_id)
+    await appletv_remote.remotes().drop(device_id)
+    await _devices().delete(device_id)
     return {"ok": True}
 
 
@@ -248,6 +248,14 @@ async def pair_status(device_id: str):
     device = _devices().get(device_id)
     if not device:
         raise HTTPException(404, "Device not found")
+    if appletv_remote.is_apple_tv(device):
+        has = appletv_remote.has_credentials(device_id)
+        return {
+            "requires_pairing": True,
+            "paired": has,
+            "has_certs": has,
+            "method": "appletv_companion",
+        }
     has = androidtv_remote.has_certs(device_id)
     paired = False
     if has:
@@ -270,6 +278,10 @@ async def pair_start(device_id: str):
     if not device:
         raise HTTPException(404, "Device not found")
     try:
+        if appletv_remote.is_apple_tv(device):
+            client = await appletv_remote.remotes().get(device)
+            await client.start_pairing()
+            return {"ok": True, "message": "Enter the PIN shown on the Apple TV"}
         client = await androidtv_remote.remotes().get(device)
         await client.start_pairing()
     except Exception as exc:  # noqa: BLE001
@@ -286,13 +298,35 @@ async def pair_finish(device_id: str, body: PairFinishRequest):
     if not pin:
         raise HTTPException(400, "PIN is required")
     try:
-        client = await androidtv_remote.remotes().get(device)
+        if appletv_remote.is_apple_tv(device):
+            client = await appletv_remote.remotes().get(device)
+        else:
+            client = await androidtv_remote.remotes().get(device)
         await client.finish_pairing(pin)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(502, f"Pairing finish failed: {exc}") from exc
     # Refresh capability flags on next poll
     await _devices().poll_one(device_id)
     return {"ok": True, "paired": True}
+
+
+@app.post("/api/devices/{device_id}/launch")
+async def launch_device(device_id: str):
+    """Open the TVMaestro app on a paired Apple TV."""
+    device = _devices().get(device_id)
+    if not device:
+        raise HTTPException(404, "Device not found")
+    if not appletv_remote.is_apple_tv(device):
+        raise HTTPException(400, "Open app is only available for Apple TV")
+    try:
+        await client_proxy.open_appletv_app(device)
+    except appletv_remote.RemoteNotPaired as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(502, str(exc)) from exc
+    await _devices().poll_one(device_id)
+    device = _devices().get(device_id)
+    return {"ok": True, "online": bool(device and device.online)}
 
 
 @app.get("/api/sessions")

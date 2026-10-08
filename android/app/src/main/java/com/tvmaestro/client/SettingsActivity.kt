@@ -1,11 +1,11 @@
 package com.tvmaestro.client
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.tvmaestro.client.cec.CecController
 import kotlin.concurrent.thread
@@ -18,7 +18,9 @@ class SettingsActivity : AppCompatActivity() {
         val portInput = findViewById<EditText>(R.id.portInput)
         val tokenInput = findViewById<EditText>(R.id.tokenInput)
         val serverInput = findViewById<EditText>(R.id.serverUrlInput)
-        val cecReport = findViewById<TextView>(R.id.cecReport)
+        val deviceSummary = findViewById<TextView>(R.id.deviceSummary)
+        val powerDetail = findViewById<TextView>(R.id.powerDetail)
+        val actionStatus = findViewById<TextView>(R.id.actionStatus)
         val saveButton = findViewById<Button>(R.id.saveButton)
         val testWake = findViewById<Button>(R.id.testWakeButton)
         val testSleep = findViewById<Button>(R.id.testSleepButton)
@@ -30,55 +32,69 @@ class SettingsActivity : AppCompatActivity() {
 
         val cec = CecController(this)
         val caps = cec.capabilities()
-        val selfIp = ServerCec.localIpv4() ?: "?"
-        cecReport.text =
+        val profile = DecoderCapability.detect()
+        val selfIp = ServerCec.localIpv4() ?: getString(R.string.no_lan)
+        val address = if (selfIp.contains(" ")) selfIp else "$selfIp:${Prefs.port(this)}"
+        val streams =
+            if (profile.multiviewMax <= 1) {
+                getString(R.string.streams_one)
+            } else {
+                getString(R.string.streams_many, profile.multiviewMax)
+            }
+        deviceSummary.text = "$address\n$streams"
+        powerDetail.text =
             buildString {
-                append("This device LAN IP: $selfIp\n")
-                append("Volume/mute: local CEC via AudioManager\n")
-                append("Wake/Sleep: TVMaestro server → Android TV Remote (or adb fallback)\n")
-                append("Local HDMI power API: ${if (caps.power) "available" else "blocked (normal on Shield)"}\n")
-                append(caps.powerDetail)
+                append("Local HDMI power API: ")
+                append(if (caps.power) "available" else "blocked (normal on Shield)")
+                if (caps.powerDetail.isNotBlank()) {
+                    append("\n")
+                    append(caps.powerDetail)
+                }
             }
 
         testVolume.setOnClickListener {
             val ok = cec.volumeUp()
-            Toast.makeText(
-                this,
+            showStatus(
+                actionStatus,
                 if (ok) "Volume up sent (CEC)" else "Volume failed — check HDMI-CEC volume settings",
-                Toast.LENGTH_LONG,
-            ).show()
+                ok,
+            )
         }
 
-        testWake.setOnClickListener { runServerAction("power_on") }
-        testSleep.setOnClickListener { runServerAction("power_off") }
+        testWake.setOnClickListener { runServerAction(actionStatus, "power_on") }
+        testSleep.setOnClickListener { runServerAction(actionStatus, "power_off") }
 
         saveButton.setOnClickListener {
-            val port = portInput.text.toString().toIntOrNull() ?: 9093
+            val port = (portInput.text.toString().toIntOrNull() ?: 9093).coerceIn(1024, 65535)
             Prefs.setPort(this, port)
             Prefs.setToken(this, tokenInput.text.toString())
             Prefs.setServerUrl(this, serverInput.text.toString())
             stopService(Intent(this, ClientService::class.java))
             startForegroundServiceCompat(Intent(this, ClientService::class.java))
-            Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
+            showStatus(actionStatus, getString(R.string.saved), true)
             finish()
         }
     }
 
-    private fun runServerAction(action: String) {
-        // Persist URL from the field so Save isn't required first.
+    private fun showStatus(view: TextView, message: String, ok: Boolean) {
+        view.visibility = android.view.View.VISIBLE
+        view.text = message
+        view.setTextColor(getColor(if (ok) R.color.accent else R.color.warn))
+    }
+
+    private fun runServerAction(status: TextView, action: String) {
         val serverInput = findViewById<EditText>(R.id.serverUrlInput)
         Prefs.setServerUrl(this, serverInput.text.toString())
-        Toast.makeText(this, "Requesting…", Toast.LENGTH_SHORT).show()
+        showStatus(status, "Requesting…", true)
         thread {
             val msg = ServerCec.request(this, action)
-            runOnUiThread {
-                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
-            }
+            val ok = msg.contains(" ok via")
+            runOnUiThread { showStatus(status, msg, ok) }
         }
     }
 
     private fun startForegroundServiceCompat(intent: Intent) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {
             startService(intent)

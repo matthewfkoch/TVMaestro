@@ -82,6 +82,9 @@ class DeviceCreate(BaseModel):
     host: str
     port: int = 9093
     token: str = ""
+    # tvos seeds Apple identity before the app has ever been online, so the
+    # guide can pair and launch it. android (or omitted) waits for /api/info.
+    platform: Optional[Literal["android", "tvos"]] = None
 
 
 class DeviceUpdate(BaseModel):
@@ -96,6 +99,7 @@ class Layout(str, Enum):
     two_h = "2x1"
     two_v = "1x2"
     quad = "2x2"
+    grid3 = "3x3"
 
 
 class SessionSlot(BaseModel):

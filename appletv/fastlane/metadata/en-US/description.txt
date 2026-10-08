@@ -1,0 +1,5 @@
+TVMaestro plays your Channels DVR library on Apple TV.
+
+Add this Apple TV in the TVMaestro web guide on your home network. The guide tunes channels, starts and stops playback, and can show up to nine streams at once. Volume and mute in the guide change the level of the stream that has audio. The Siri Remote still controls the television.
+
+This is a player for the Channels DVR server you already run. It does not include its own channel lineup. Leave the app open, or pair it once in the guide so Tune and Open can bring it forward. The Apple TV has to be awake.

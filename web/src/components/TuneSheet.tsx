@@ -1,5 +1,4 @@
 import type { Channel, Device, Programme } from "../api";
-import { streamCompatWarning } from "../streamCompat";
 import ProgramArt from "./ProgramArt";
 
 type Props = {
@@ -31,7 +30,6 @@ export default function TuneSheet({
 }: Props) {
   const selected = devices.find((d) => d.id === selectedDeviceId);
   const canMultiview = (selected?.capabilities?.multiview_max ?? 1) > 1;
-  const streamWarning = selected ? streamCompatWarning(selected, channel) : null;
 
   return (
     <>
@@ -80,12 +78,6 @@ export default function TuneSheet({
             <p style={{ margin: 0, color: "var(--text-dim)", fontSize: "0.85rem" }}>
               {selected.capabilities.chip_note}
             </p>
-          )}
-
-          {streamWarning && (
-            <div className="error" style={{ background: "rgba(255, 180, 0, 0.12)", borderColor: "rgba(255, 180, 0, 0.35)", color: "var(--text)" }}>
-              {streamWarning}
-            </div>
           )}
 
           {error && <div className="error">{error}</div>}

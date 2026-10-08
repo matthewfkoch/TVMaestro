@@ -13,3 +13,13 @@ data class PlaybackSession(
     val layout: String? = "1",
     val slots: List<SessionSlot> = emptyList(),
 )
+
+fun layoutDims(layout: String?): Pair<Int, Int> =
+    when (layout) {
+        "2x1" -> 1 to 2
+        "1x2" -> 2 to 1
+        "2x2" -> 2 to 2
+        else -> 1 to 1
+    }
+
+fun SessionSlot.isPlayable(): Boolean = !url.isNullOrBlank()

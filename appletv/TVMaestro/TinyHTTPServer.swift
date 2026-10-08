@@ -8,7 +8,24 @@ final class TinyHTTPServer {
     private let port: NWEndpoint.Port
     private let handler: Handler
     private var listener: NWListener?
+    private var state: NWListener.State = .setup
+    private var rebindAttempts = 0
+    private let stateLock = NSLock()
     private let queue = DispatchQueue(label: "com.tvmaestro.httpserver")
+
+    /// True while a listener exists and has not failed. `.setup` counts so a
+    /// foreground bounce during startup does not cancel a bind still in progress.
+    var isListening: Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        guard listener != nil else { return false }
+        switch state {
+        case .ready, .waiting, .setup:
+            return true
+        default:
+            return false
+        }
+    }
 
     init(port: UInt16, handler: @escaping Handler) {
         self.port = NWEndpoint.Port(rawValue: port)!
@@ -16,24 +33,55 @@ final class TinyHTTPServer {
     }
 
     func start() throws {
+        rebindAttempts = 0
+        try bind()
+    }
+
+    func stop() {
+        listener?.stateUpdateHandler = nil
+        listener?.cancel()
+        listener = nil
+        stateLock.lock()
+        state = .cancelled
+        stateLock.unlock()
+    }
+
+    private func bind() throws {
+        if let existing = listener {
+            existing.stateUpdateHandler = nil
+            existing.cancel()
+            listener = nil
+        }
         let params = NWParameters.tcp
         params.allowLocalEndpointReuse = true
         let listener = try NWListener(using: params, on: port)
         listener.newConnectionHandler = { [weak self] connection in
             self?.accept(connection)
         }
-        listener.stateUpdateHandler = { state in
-            if case .failed(let error) = state {
-                NSLog("TVMaestro HTTP listener failed: \(error)")
-            }
+        listener.stateUpdateHandler = { [weak self] newState in
+            self?.handle(newState)
         }
         listener.start(queue: queue)
         self.listener = listener
     }
 
-    func stop() {
-        listener?.cancel()
-        listener = nil
+    private func handle(_ newState: NWListener.State) {
+        stateLock.lock()
+        state = newState
+        stateLock.unlock()
+        guard case .failed(let error) = newState else { return }
+        NSLog("TVMaestro HTTP listener failed: \(error)")
+        let code = (error as NSError).code
+        guard code == Int(POSIXError.EADDRINUSE.rawValue), rebindAttempts < 5 else { return }
+        rebindAttempts += 1
+        queue.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            guard let self else { return }
+            do {
+                try self.bind()
+            } catch {
+                NSLog("TVMaestro HTTP rebind failed: \(error)")
+            }
+        }
     }
 
     private func accept(_ connection: NWConnection) {

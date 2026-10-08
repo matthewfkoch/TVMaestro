@@ -63,7 +63,7 @@ export type Session = {
   id: string;
   device_id: string;
   mode: "single" | "multiview";
-  layout: "1" | "2x1" | "1x2" | "2x2";
+  layout: "1" | "2x1" | "1x2" | "2x2" | "3x3";
   slots: SessionSlot[];
   status: string;
   error?: string | null;
@@ -121,8 +121,13 @@ export const api = {
   epg: (from: number, to: number) =>
     req<Programme[]>(`/api/epg?from=${from}&to=${to}`),
   devices: () => req<Device[]>("/api/devices"),
-  createDevice: (body: { name: string; host: string; port?: number; token?: string }) =>
-    req<Device>("/api/devices", { method: "POST", body: JSON.stringify(body) }),
+  createDevice: (body: {
+    name: string;
+    host: string;
+    port?: number;
+    token?: string;
+    platform?: "android" | "tvos";
+  }) => req<Device>("/api/devices", { method: "POST", body: JSON.stringify(body) }),
   updateDevice: (
     id: string,
     body: { name?: string; host?: string; port?: number; token?: string },
@@ -143,6 +148,11 @@ export const api = {
     req<{ ok: boolean; paired: boolean }>(`/api/devices/${id}/pair/finish`, {
       method: "POST",
       body: JSON.stringify({ pin }),
+    }),
+  launch: (id: string) =>
+    req<{ ok: boolean; online: boolean }>(`/api/devices/${id}/launch`, {
+      method: "POST",
+      body: "{}",
     }),
   sessions: () => req<Session[]>("/api/sessions"),
   createSession: (body: {

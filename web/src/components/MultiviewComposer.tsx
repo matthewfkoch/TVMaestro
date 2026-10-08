@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Channel, Device, Programme } from "../api";
-import { multiviewStreamWarnings } from "../streamCompat";
 import ProgramArt from "./ProgramArt";
 
-export type LayoutId = "1" | "2x1" | "1x2" | "2x2";
+export type LayoutId = "1" | "2x1" | "1x2" | "2x2" | "3x3";
 
 const CAPACITY: Record<LayoutId, number> = {
   "1": 1,
   "2x1": 2,
   "1x2": 2,
   "2x2": 4,
+  "3x3": 9,
 };
 
 function currentByChannel(programmes: Programme[], now: number): Map<string, Programme> {
@@ -198,7 +198,6 @@ export default function MultiviewComposer({
   const effectiveLayout = allowedLayouts.includes(layout) ? layout : allowedLayouts[0] || "1";
   const cap = Math.min(CAPACITY[effectiveLayout], deviceMax);
   const filled = slots.slice(0, cap).filter(Boolean).length;
-  const streamWarnings = multiviewStreamWarnings(selected ?? null, slots);
 
   return (
     <>
@@ -289,16 +288,6 @@ export default function MultiviewComposer({
               })}
             </div>
           </div>
-          )}
-
-          {streamWarnings.length > 0 && (
-            <div className="error" style={{ background: "rgba(255, 180, 0, 0.12)", borderColor: "rgba(255, 180, 0, 0.35)", color: "var(--text)" }}>
-              {streamWarnings.map((w) => (
-                <p key={w} style={{ margin: "0 0 0.5rem" }}>
-                  {w}
-                </p>
-              ))}
-            </div>
           )}
 
           {error && <div className="error">{error}</div>}

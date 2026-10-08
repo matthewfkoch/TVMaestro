@@ -10,16 +10,16 @@ rescue Errno::ENOENT, JSON::ParserError
 end
 
 platform :tvos do
-  desc "Register bundle ID + App Store Connect app (one-time, same Apple account as BSI/EAS)"
+  desc "Register bundle ID + App Store Connect app (one-time)"
   lane :setup do
     cfg = testflight_config
-    apple_id = ENV.fetch("FASTLANE_USER") { UI.input("Apple ID (same as Big Stick / EAS): ") }
+    apple_id = ENV.fetch("FASTLANE_USER") { UI.input("Apple ID: ") }
     team_id = ENV.fetch("APPLE_TEAM_ID") { UI.input("Team ID (10 chars, developer.apple.com/account): ") }
 
     produce(
       app_identifier: cfg["bundleId"] || "com.tvmaestro.client",
       app_name: cfg["appName"] || "TVMaestro",
-      app_version: "0.2.0",
+      app_version: "0.4.0",
       sku: "tvmaestro-appletv",
       platform: "tvos",
       username: apple_id,
@@ -31,19 +31,18 @@ platform :tvos do
     UI.success("Created/verified App Store Connect app. Copy the numeric Apple ID into appletv/testflight.json → ascAppId")
   end
 
-  desc "Build Release and upload to TestFlight (like: eas build --auto-submit)"
+  desc "Build Release and upload to TestFlight"
   lane :beta do
     cfg = testflight_config
     team_id = resolve_team_id
 
-    if ENV["GITHUB_RUN_NUMBER"]
-      increment_build_number(
-        build_number: ENV["GITHUB_RUN_NUMBER"],
-        xcodeproj: "TVMaestro.xcodeproj"
-      )
-    else
-      increment_build_number(xcodeproj: "TVMaestro.xcodeproj")
-    end
+    current_build = get_build_number(xcodeproj: "TVMaestro.xcodeproj").to_i
+    run_number = ENV["GITHUB_RUN_NUMBER"].to_i
+    next_build = [current_build + 1, run_number].max
+    increment_build_number(
+      build_number: next_build.to_s,
+      xcodeproj: "TVMaestro.xcodeproj"
+    )
 
     if ENV["GITHUB_REF_NAME"]&.start_with?("v")
       version = ENV["GITHUB_REF_NAME"].delete_prefix("v")
@@ -95,12 +94,37 @@ platform :tvos do
     )
   end
 
+  desc "Upload tvOS App Store listing only (no binary, no review submission)"
+  lane :metadata do
+    cfg = testflight_config
+    version = get_version_number(
+      xcodeproj: "TVMaestro.xcodeproj",
+      target: "TVMaestro"
+    )
+
+    upload_args = upload_credentials_hash.merge(
+      app_identifier: cfg["bundleId"] || "com.tvmaestro.client",
+      app_version: version,
+      platform: "appletvos",
+      team_id: resolve_team_id,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      force: true,
+      run_precheck_before_submit: false,
+      metadata_path: "fastlane/metadata",
+      app_rating_config_path: "fastlane/metadata/rating_config.json"
+    )
+
+    upload_to_app_store(**upload_args)
+  end
+
   private_lane :resolve_team_id do
     if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
       ENV["APPLE_TEAM_ID"]
     else
       UI.user_error!(
-        "Set APPLE_TEAM_ID (same Apple Developer team as Big Stick Invitational — Membership page on developer.apple.com)"
+        "Set APPLE_TEAM_ID (10 characters, from developer.apple.com/account → Membership)"
       )
     end
   end
@@ -119,7 +143,7 @@ platform :tvos do
       { username: ENV["FASTLANE_USER"] }
     else
       UI.user_error!(
-        "Set FASTLANE_USER=your@email.com (same Apple ID as Big Stick / EAS), or ASC_* API key env vars for CI"
+        "Set FASTLANE_USER=your@email.com, or ASC_* API key env vars for CI"
       )
     end
   end

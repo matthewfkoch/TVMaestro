@@ -66,6 +66,7 @@ enum LayoutGeometry {
         case "2x1": return (1, 2)
         case "1x2": return (2, 1)
         case "2x2": return (2, 2)
+        case "3x3": return (3, 3)
         default: return (1, 1)
         }
     }

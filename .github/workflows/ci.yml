@@ -90,8 +90,8 @@ jobs:
           fi
 
           yes | "$SDKMANAGER" --licenses >/dev/null
-          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
-          test -d "${ANDROID_HOME}/platforms/android-35"
+          "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0"
+          test -d "${ANDROID_HOME}/platforms/android-36"
       - name: Assemble debug
         run: |
           chmod +x ./gradlew

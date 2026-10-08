@@ -33,6 +33,10 @@ appletv/.bundle/
 appletv/fastlane/report.xml
 appletv/fastlane/Preview.html
 appletv/fastlane/test_output
+appletv/fastlane/metadata/review_information/first_name.txt
+appletv/fastlane/metadata/review_information/last_name.txt
+appletv/fastlane/metadata/review_information/phone_number.txt
+appletv/fastlane/metadata/review_information/email_address.txt
 appletv/*.ipa
 appletv/*.dSYM.zip
 appletv/TVMaestro.xcodeproj/project.xcworkspace/
@@ -41,3 +45,7 @@ appletv/TVMaestro.xcodeproj/xcuserdata/
 .idea/
 .DS_Store
 *.log
+*.p8
+*.pem
+DerivedData/
+*.xcuserstate

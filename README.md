@@ -9,7 +9,7 @@ EPG orchestrator for [Channels DVR](https://getchannels.com/) with a polished we
 - **Server** (Python / FastAPI, port **6790**) — ingests Channels DVR M3U + XMLTV, device registry, session orchestration
 - **Web UI** (React / Vite) — broadcast-style EPG, tune sheet, multiview composer, CEC controls
 - **Android client** (Kotlin / Media3 ExoPlayer, control API **9093**) — plays HLS/MPEG-TS; best-effort HDMI-CEC
-- **Apple TV** (`appletv/`) — tvOS client (same control API as Android; prefer HLS streams)
+- **Apple TV** (`appletv/`) — tvOS client (same control API as Android; KSPlayer plays MPEG-TS, including MPEG-2; up to nine-pane multiview)
 
 Control plane: browser → TVMaestro server → Android TV or Apple TV client.  
 Media plane: the client pulls stream URLs directly from Channels (or APITuner).
@@ -110,38 +110,42 @@ Tagged releases (`v*`) trigger `.github/workflows/release.yml`, which:
 
 1. Runs the server tests, then publishes a multi-arch image (`linux/amd64` + `linux/arm64`) to GitHub Container Registry: `ghcr.io/matthewfkoch/tvmaestro:<version>` and `:latest`
 2. Builds the Android TV APK and attaches it to a [GitHub Release](https://github.com/matthewfkoch/TVMaestro/releases) on this repo
-3. Uploads the Apple TV build to TestFlight when `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID` are set (otherwise that job skips)
+
+The same tag triggers `.github/workflows/testflight.yml`, which uploads the Apple TV build to TestFlight when `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID` are set. If those secrets are missing, that job skips. A local upload with `scripts/testflight-appletv.sh` does not need them.
 
 A manual run of the Release workflow (no tag) publishes `:dev` only. Do not retag a version that already shipped.
 
 If the package is still private (the default when the repo started private), open **Packages → tvmaestro → Package settings**, link it to this repo, and set visibility to **Public** so `docker pull` works without a GitHub login. The repo itself also has to be public for people to download the APK from Releases.
 
-Bump `server/tvmaestro/__version__.py` and the Android `versionName` / `versionCode`, then:
+Bump these together, then tag:
+
+- `server/tvmaestro/__version__.py`
+- `web/package.json`
+- Android `versionName` and `versionCode` in `android/app/build.gradle.kts`
+- Apple TV `MARKETING_VERSION` in `appletv/TVMaestro.xcodeproj` (`Info.plist` reads `$(MARKETING_VERSION)` and `$(CURRENT_PROJECT_VERSION)`; Fastlane increments the build number on upload)
 
 ```bash
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-**Signing:** the release APK uses the same keystore as APITuner (alias `apituner`), stored as the same four repository secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. Do not generate a new keystore. DisplayLauncher has its own key and is not shared. Upgrades install over a previous TVMaestro release only when both APKs use this key. If those secrets are missing, the workflow attaches a debug APK (`tvmaestro-android-<version>-debug.apk`) instead.
+**Signing:** release APKs are signed with the repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. Do not generate a new keystore. Upgrades install over a previous TVMaestro release only when both APKs use this key. If those secrets are missing, the workflow attaches a debug APK (`tvmaestro-android-<version>-debug.apk`) instead.
 
 ### Apple TV client
 
-Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** with the LAN IP and port `9093`. Prefer **HLS** from Channels DVR. Leave the app open for the control API. Details below.
+Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** and choose **Apple TV** with the LAN IP and port `9093`. Pair it once under **Edit device** (PIN on the Apple TV) so Tune and **Open** can launch the app when it is not in front. The Apple TV box has to be awake. The app plays the original MPEG-TS stream from Channels DVR.
 
-### TestFlight (recommended — same Apple account as Big Stick Invitational)
-
-Big Stick uses `eas build --auto-submit` for iPhone. TVMaestro is native tvOS, so use Fastlane instead:
+### TestFlight
 
 ```bash
-export FASTLANE_USER=your@email.com   # same Apple ID as EAS
-export APPLE_TEAM_ID=XXXXXXXXXX       # same team as BSI
+export FASTLANE_USER=your@email.com
+export APPLE_TEAM_ID=XXXXXXXXXX
 scripts/testflight-appletv.sh
 ```
 
-One-time: create the tvOS app in App Store Connect and set `ascAppId` in `appletv/testflight.json` (like `ascAppId` in BSI's `eas.json`). Full steps: `appletv/docs/TESTFLIGHT.md`.
+One-time: create the tvOS app in App Store Connect and set `ascAppId` in `appletv/testflight.json`. Full steps, including a public link for other Apple TVs: `appletv/docs/TESTFLIGHT.md`.
 
-GitHub Actions TestFlight (API key secrets) is optional; local Apple ID upload does not need them.
+GitHub Actions upload is `.github/workflows/testflight.yml` and needs the API key secrets above. Local Apple ID upload does not. The upload places the build in App Store Connect; the public link is turned on there after processing.
 
 ### Xcode direct install (development)
 
@@ -177,7 +181,8 @@ Multiview max depends on the SoC: capable devices report up to 4 panes; many Aml
 | GET/POST | `/api/devices` | Register Android TV / Apple TV endpoints |
 | PATCH/DELETE | `/api/devices/{id}` | Update / remove device |
 | POST | `/api/devices/{id}/cec` | `power_on`, `power_off`, `volume_up`, `volume_down`, `mute` |
-| POST | `/api/devices/{id}/pair/start` · `/pair/finish` | Android TV Remote pairing (not Apple TV) |
+| POST | `/api/devices/{id}/pair/start` · `/pair/finish` | Android TV Remote pairing, or Apple TV Companion pairing |
+| POST | `/api/devices/{id}/launch` | Open the TVMaestro app on a paired Apple TV |
 | GET/POST | `/api/sessions` | List / start single or multiview |
 | POST | `/api/sessions/{id}/stop` | Stop playback |
 | POST | `/api/youtube/resolve` | Resolve YouTube URL via APITuner → MPEG-TS slot |
@@ -186,11 +191,13 @@ Multiview max depends on the SoC: capable devices report up to 4 panes; many Aml
 
 ## Multiview layouts
 
-`1`, `2x1`, `1x2`, `2x2` — max 4 streams; exactly one slot marked for audio. Empty middle slots are preserved in the grid.
+`1`, `2x1`, `1x2`, `2x2`, `3x3`. Exactly one slot is marked for audio. Empty slots stay in the grid.
+
+Apple TV reports up to nine panes (`3x3`). Android TV reports up to four panes (`2x2`); many Amlogic/MediaTek sticks are clamped to one.
 
 ## CEC
 
-Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick). On **Apple TV**, volume/mute adjust in-app gain on the audio-focus pane (tvOS cannot inject HDMI volume keys). Wake/Sleep are Android-only.
+Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick). On **Apple TV**, volume/mute adjust in-app gain on the audio-focus pane (tvOS cannot inject HDMI volume keys). Wake/Sleep of the television are Android-only. A paired Apple TV can still be asked to open the TVMaestro app (`POST /api/devices/{id}/launch`, or automatically when a tune finds the app closed).
 
 **Wake/Sleep (preferred):** pair **Android TV Remote** once from **Edit device → Pair** (PIN on the TV). The server uses the Google TV remote protocol (`androidtvremote2`) — no ADB. Enable One Touch Play / CEC TV Off in the device Power Control settings so the TV follows. Works on Shield / Google TV / Android TV (not Fire OS, not Apple TV).
 
@@ -198,8 +205,10 @@ Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when
 
 ## YouTube
 
-Set **APITuner base URL** in Settings. TVMaestro asks APITuner for a playable MPEG-TS URL (encoder relay), then plays it on **Android TV**. Apple TV prefers HLS from Channels DVR; YouTube/TS on tvOS is best-effort and usually fails.
+Set **APITuner base URL** in Settings. TVMaestro asks APITuner for a playable MPEG-TS URL (encoder relay), then plays it on the selected Android TV or Apple TV.
 
 ## License
 
 [MIT](LICENSE) © 2026 Matthew Koch.
+
+The Apple TV app links [KSPlayer](https://github.com/kingslay/KSPlayer) and [FFmpegKit](https://github.com/kingslay/FFmpegKit), GPL-3.0-only. See [NOTICE](NOTICE).

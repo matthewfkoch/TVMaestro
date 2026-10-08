@@ -8,11 +8,14 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.tvmaestro.client.BuildConfig
 import com.tvmaestro.client.DecoderCapability
+import com.tvmaestro.client.GuideReach
 import com.tvmaestro.client.PlaybackSession
 import com.tvmaestro.client.PlayerActivity
 import com.tvmaestro.client.Prefs
 import com.tvmaestro.client.SessionSlot
 import com.tvmaestro.client.SessionStore
+import com.tvmaestro.client.isPlayable
+import com.tvmaestro.client.layoutDims
 import com.tvmaestro.client.cec.CecController
 import fi.iki.elonen.NanoHTTPD
 
@@ -35,13 +38,27 @@ class ClientWebServer(
 
             when {
                 uri == "/" -> text("TVMaestro Client")
-                uri == "/api/health" && method == Method.GET ->
+                uri == "/api/health" && method == Method.GET -> {
+                    GuideReach.mark()
                     json(mapOf("success" to true, "message" to "TVMaestro Client running"))
-                uri == "/api/info" && method == Method.GET -> info()
-                uri == "/api/session" && method == Method.GET -> getSession()
+                }
+                uri == "/api/info" && method == Method.GET -> {
+                    GuideReach.mark()
+                    info()
+                }
+                uri == "/api/session" && method == Method.GET -> {
+                    GuideReach.mark()
+                    getSession()
+                }
                 uri == "/api/session" && method == Method.POST -> setSession(session)
-                uri == "/api/session/stop" && method == Method.POST -> stopSession()
-                uri == "/api/cec" && method == Method.POST -> handleCec(session)
+                uri == "/api/session/stop" && method == Method.POST -> {
+                    GuideReach.mark()
+                    stopSession()
+                }
+                uri == "/api/cec" && method == Method.POST -> {
+                    GuideReach.mark()
+                    handleCec(session)
+                }
                 else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not Found")
             }
         } catch (e: Exception) {
@@ -113,28 +130,40 @@ class ClientWebServer(
 
     private fun setSession(session: IHTTPSession): Response {
         val jsonBody = body(session)
+        val layout = jsonBody.get("layout")?.takeUnless { it.isJsonNull }?.asString ?: "1"
+        val (rows, cols) = layoutDims(layout)
+        val capacity = rows * cols
         val slotsJson = jsonBody.getAsJsonArray("slots") ?: gson.toJsonTree(emptyList<Any>()).asJsonArray
-        val slots =
-            slotsJson.mapNotNull { el ->
-                val o = el.asJsonObject
-                val url = o.get("url")?.asString
-                if (url.isNullOrBlank()) null
-                else SessionSlot(
-                    url = url,
-                    title = o.get("title")?.asString,
-                    audio = o.get("audio")?.asBoolean ?: false,
-                    channel_id = o.get("channel_id")?.asString,
-                )
+        val slots = mutableListOf<SessionSlot>()
+        val limit = minOf(slotsJson.size(), capacity)
+        for (i in 0 until limit) {
+            val el = slotsJson[i]
+            if (!el.isJsonObject) {
+                slots.add(SessionSlot())
+                continue
             }
-        if (slots.isEmpty()) {
+            val o = el.asJsonObject
+            slots.add(
+                SessionSlot(
+                    url = jsonString(o, "url"),
+                    title = jsonString(o, "title"),
+                    audio = o.get("audio")?.takeUnless { it.isJsonNull }?.asBoolean ?: false,
+                    channel_id = jsonString(o, "channel_id"),
+                ),
+            )
+        }
+        while (slots.size < capacity) slots.add(SessionSlot())
+        val playable = slots.count { it.isPlayable() }
+        if (playable == 0) {
             return json(mapOf("success" to false, "message" to "No playable slots"), Response.Status.BAD_REQUEST)
         }
-        val max = DecoderCapability.detect().multiviewMax
-        if (slots.size > max) {
+        val profile = DecoderCapability.detect()
+        val max = profile.multiviewMax
+        if (playable > max) {
             return json(
                 mapOf(
                     "success" to false,
-                    "message" to "This device supports at most $max simultaneous stream(s) (${DecoderCapability.detect().note})",
+                    "message" to "This device supports at most $max simultaneous stream(s) (${profile.note})",
                     "multiview_max" to max,
                 ),
                 Response.Status.BAD_REQUEST,
@@ -142,14 +171,21 @@ class ClientWebServer(
         }
         val playback =
             PlaybackSession(
-                id = jsonBody.get("id")?.asString,
-                mode = jsonBody.get("mode")?.asString ?: "single",
-                layout = jsonBody.get("layout")?.asString ?: "1",
+                id = jsonString(jsonBody, "id"),
+                mode = if (playable > 1) "multiview" else "single",
+                layout = layout,
                 slots = slots,
             )
+        GuideReach.mark()
         SessionStore.set(playback)
         bringPlayerToFront()
         return json(mapOf("success" to true, "session" to playback))
+    }
+
+    private fun jsonString(obj: com.google.gson.JsonObject, key: String): String? {
+        val el = obj.get(key) ?: return null
+        if (el.isJsonNull) return null
+        return el.asString?.takeIf { it.isNotBlank() }
     }
 
     private fun stopSession(): Response {

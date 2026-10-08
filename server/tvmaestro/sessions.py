@@ -20,6 +20,7 @@ LAYOUT_CAPACITY = {
     Layout.two_h: 2,
     Layout.two_v: 2,
     Layout.quad: 4,
+    Layout.grid3: 9,
 }
 
 

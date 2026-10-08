@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import KSPlayer
 import UIKit
 
 /// Shared app state: prefs, control server, playback session, and chrome.
@@ -14,6 +15,8 @@ final class AppModel: ObservableObject {
     @Published var streamWarning: String?
     @Published var volumeHUD: String?
     @Published var chromeVisible = true
+    @Published var guideSeen = false
+    @Published var guidePaired = false
 
     private var server: ControlServer?
     private var volumeListener: UUID?
@@ -24,6 +27,8 @@ final class AppModel: ObservableObject {
     private enum Keys {
         static let port = "controlPort"
         static let token = "authToken"
+        static let guideSeen = "guideSeen"
+        static let guidePaired = "guidePaired"
     }
 
     var isPlaying: Bool {
@@ -39,9 +44,29 @@ final class AppModel: ObservableObject {
         let storedPort = defaults.object(forKey: Keys.port) as? Int
         port = storedPort ?? 9093
         authToken = defaults.string(forKey: Keys.token) ?? ""
+        guideSeen = defaults.bool(forKey: Keys.guideSeen)
+        guidePaired = defaults.bool(forKey: Keys.guidePaired)
+    }
+
+    var idleDetail: String {
+        if guideSeen && guidePaired {
+            return "Paired with the guide. Waiting for a session."
+        }
+        if guideSeen {
+            return "Added to the guide. Pair it under Edit device so the guide can open this app."
+        }
+        return "Add this address in the web guide, then pair under Edit device."
+    }
+
+    func noteGuideLink(registered: Bool, paired: Bool) {
+        guideSeen = registered
+        guidePaired = paired
+        defaults.set(registered, forKey: Keys.guideSeen)
+        defaults.set(paired, forKey: Keys.guidePaired)
     }
 
     func start() {
+        KSOptions.firstPlayerType = KSMEPlayer.self
         AudioController.configureAudioSession()
         refreshAddresses()
         restartServer()
@@ -66,6 +91,32 @@ final class AppModel: ObservableObject {
         localAddresses = LocalIP.ipv4Addresses()
         if !isPlaying {
             statusLine = idleStatus()
+        }
+    }
+
+    /// tvOS drops the listening socket while the app is suspended. Rebind when it returns
+    /// to the foreground so a remote Open / tune can reach the control API again.
+    func resumeFromForeground() {
+        refreshAddresses()
+        guard let server else {
+            restartServer()
+            return
+        }
+        if server.isListening {
+            if !isPlaying {
+                statusLine = idleStatus()
+            }
+            return
+        }
+        do {
+            try server.restartListening()
+            if !isPlaying {
+                statusLine = idleStatus()
+            }
+            lastError = nil
+        } catch {
+            statusLine = "Control API failed: \(error.localizedDescription)"
+            lastError = statusLine
         }
     }
 
@@ -155,6 +206,8 @@ final class AppModel: ObservableObject {
                 case .failed(let message):
                     self.lastError = message
                     self.statusLine = message
+                case .guide(let registered, let paired):
+                    self.noteGuideLink(registered: registered, paired: paired)
                 }
             }
         }
@@ -172,8 +225,6 @@ final class AppModel: ObservableObject {
     }
 
     private func idleStatus() -> String {
-        let hosts = localAddresses.isEmpty ? ["<no LAN IP>"] : localAddresses
-        let list = hosts.map { "\($0):\(port)" }.joined(separator: ", ")
-        return "Control API on \(list)"
+        idleDetail
     }
 }

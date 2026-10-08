@@ -1,15 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TVMaestro</string>
-    <string name="waiting">Waiting for session from TVMaestro server…</string>
+    <string name="waiting">Waiting for the guide</string>
+    <string name="guide_connected">Guide connected</string>
+    <string name="streams_one">1 stream</string>
+    <string name="streams_many">Up to %1$d streams</string>
     <string name="settings">Settings</string>
+    <string name="address_caption">Address</string>
+    <string name="device_caption">This device</string>
+    <string name="address_hint">Use this in the guide when you add the device.</string>
+    <string name="no_lan">No LAN address yet. Check Ethernet or Wi-Fi.</string>
+    <string name="back_stops">Back stops playback</string>
+    <string name="pane_failed">Couldn\'t play</string>
     <string name="port_label">Control API port</string>
     <string name="token_label">API token (optional)</string>
-    <string name="server_url_label">TVMaestro server URL (for Wake/Sleep)</string>
+    <string name="token_hint">If set, the web UI device token must match (X-Auth-Token).</string>
+    <string name="server_url_label">TVMaestro server URL</string>
     <string name="server_url_hint">http://tvmaestro.local:6790</string>
+    <string name="section_control">Control API</string>
+    <string name="section_device">This device</string>
+    <string name="section_power">Power and volume</string>
+    <string name="power_hint">Volume and mute use HDMI-CEC. Wake and sleep go through the TVMaestro server.</string>
     <string name="test_wake">Test wake</string>
     <string name="test_sleep">Test sleep</string>
     <string name="test_cec">Test volume up</string>
     <string name="save">Save</string>
+    <string name="saved">Saved. Control API restarted.</string>
     <string name="cec_report">CEC capabilities</string>
 </resources>

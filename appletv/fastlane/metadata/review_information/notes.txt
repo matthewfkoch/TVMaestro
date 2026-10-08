@@ -1,0 +1,7 @@
+This app is a player for the user’s own Channels DVR server on their home network. It does not include a channel lineup or a web browser.
+
+On launch it shows this Apple TV’s LAN address. Playback starts when the TVMaestro web guide sends a session to the app. There is no demo account.
+
+NSAllowsArbitraryLoads is enabled because Channels DVR serves HLS over HTTP on the local network. The app does not use that exception to load remote web pages.
+
+The app stores only a port, an optional auth token, and guide pairing flags on the device. It does not collect personal data.

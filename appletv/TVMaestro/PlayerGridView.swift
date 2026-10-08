@@ -1,5 +1,5 @@
-import AVFoundation
-import AVKit
+import KSPlayer
+import KSPlayerUI
 import MediaPlayer
 import SwiftUI
 
@@ -17,8 +17,9 @@ struct PlayerGridView: View {
         let cols = geometry.cols
         let capacity = rows * cols
         let slots = Array(session.slots.prefix(capacity))
+        let showChrome = slots.filter(\.isPlayable).count > 1
 
-        Grid(horizontalSpacing: 2, verticalSpacing: 2) {
+        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
             ForEach(0..<rows, id: \.self) { row in
                 GridRow {
                     ForEach(0..<cols, id: \.self) { col in
@@ -27,11 +28,12 @@ struct PlayerGridView: View {
                             SlotPlayerView(
                                 slot: slots[index],
                                 paneIndex: index,
+                                showChrome: showChrome,
                                 audioTick: audioTick,
                                 onError: onError
                             )
                         } else {
-                            Theme.bg
+                            Color.white.opacity(0.04)
                         }
                     }
                 }
@@ -64,168 +66,150 @@ final class AudioTick: ObservableObject {
 struct SlotPlayerView: View {
     let slot: SessionSlot
     let paneIndex: Int
+    let showChrome: Bool
     @ObservedObject var audioTick: AudioTick
     var onError: (String) -> Void
 
-    @StateObject private var model = SlotPlayerModel()
+    @StateObject private var coordinator = KSVideoPlayer.Coordinator()
+    @State private var options = SlotPlayerView.makeOptions()
+    @State private var armed = false
+    @State private var failed = false
+    @State private var startToken = UUID()
+
+    private var playURL: URL? {
+        guard slot.isPlayable,
+              let raw = slot.url?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty
+        else { return nil }
+        return URL(string: raw)
+    }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             Theme.bg
-            if slot.isPlayable {
-                PlayerLayerView(player: model.player)
-            } else {
-                Color.black.opacity(0.35)
+            if armed, let playURL {
+                KSVideoPlayer(coordinator: coordinator, url: playURL, options: options)
+                    .onStateChanged { _, state in
+                        if state == .error {
+                            fail("Pane \(paneIndex + 1): playback failed")
+                        }
+                    }
+                    .onFinish { _, error in
+                        if let error {
+                            fail("Pane \(paneIndex + 1): \(error.localizedDescription)")
+                        }
+                    }
+            } else if playURL == nil {
+                Color.white.opacity(0.04)
             }
-
-            if let title = slot.title, slot.isPlayable {
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.text)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
-                    .padding(12)
+            if failed {
+                Text("Couldn't play")
+                    .font(.headline)
+                    .foregroundStyle(Theme.warn)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.opacity(0.45))
+            }
+            paneCaption
+        }
+        .overlay {
+            if showChrome {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .stroke(slot.audio && slot.isPlayable ? Theme.accent : Color.white.opacity(0.12), lineWidth: slot.audio ? 4 : 1)
             }
         }
         .onAppear {
-            model.configure(slot: slot, paneIndex: paneIndex, onError: onError)
+            scheduleStart()
+            applyVolume()
+            updateNowPlaying()
         }
-        .onChange(of: slot) { _, newValue in
-            model.configure(slot: newValue, paneIndex: paneIndex, onError: onError)
+        .onChange(of: slot) { _, _ in
+            failed = false
+            scheduleStart()
+            applyVolume()
+            updateNowPlaying()
+        }
+        .onChange(of: armed) { _, isArmed in
+            if isArmed { applyVolume() }
         }
         .onChange(of: audioTick.generation) { _, _ in
-            model.applyVolume(slotHasAudio: slot.audio)
+            applyVolume()
         }
-        .onDisappear { model.teardown() }
-    }
-}
-
-struct PlayerLayerView: UIViewRepresentable {
-    let player: AVPlayer
-
-    func makeUIView(context: Context) -> PlayerUIView {
-        PlayerUIView(player: player)
     }
 
-    func updateUIView(_ uiView: PlayerUIView, context: Context) {
-        uiView.playerLayer.player = player
+    @ViewBuilder
+    private var paneCaption: some View {
+        let title = slot.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let showSpeaker = showChrome && slot.audio && slot.isPlayable
+        if showSpeaker || !title.isEmpty {
+            HStack(spacing: 8) {
+                if showSpeaker {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.title3)
+                        .foregroundStyle(Theme.accent)
+                        .padding(8)
+                        .background(Theme.panel.opacity(0.92), in: Circle())
+                }
+                if !title.isEmpty {
+                    Text(title)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Theme.panel.opacity(0.92), in: Capsule())
+                }
+            }
+            .padding(12)
+        }
     }
-}
 
-final class PlayerUIView: UIView {
-    override class var layerClass: AnyClass { AVPlayerLayer.self }
-    var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
-
-    init(player: AVPlayer) {
-        super.init(frame: .zero)
-        playerLayer.player = player
-        playerLayer.videoGravity = .resizeAspect
-        backgroundColor = .black
+    /// MPEG-2 (typical ATSC) has no VideoToolbox decoder on tvOS, so decode in software.
+    private static func makeOptions() -> KSOptions {
+        let options = KSOptions()
+        options.videoDecodeType = .software
+        options.registerRemoteControll = false
+        options.isAutoPlay = true
+        options.subtitleDisable = true
+        options.preferredForwardBufferDuration = 1
+        return options
     }
 
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-}
-
-@MainActor
-final class SlotPlayerModel: ObservableObject {
-    let player = AVPlayer()
-    private var endObserver: NSObjectProtocol?
-    private var statusObservation: NSKeyValueObservation?
-    private var errorObservation: NSKeyValueObservation?
-    private var paneIndex = 0
-    private var onError: ((String) -> Void)?
-    private var startTask: Task<Void, Never>?
-    private var slotHasAudio = false
-
-    func configure(slot: SessionSlot, paneIndex: Int, onError: @escaping (String) -> Void) {
-        self.paneIndex = paneIndex
-        self.onError = onError
-        self.slotHasAudio = slot.audio
-        startTask?.cancel()
-        teardown(keepPlayer: true)
-
-        guard let urlString = slot.url?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !urlString.isEmpty,
-              let url = URL(string: urlString)
-        else {
-            player.replaceCurrentItem(with: nil)
+    private func scheduleStart() {
+        let token = UUID()
+        startToken = token
+        guard playURL != nil else {
+            armed = false
             return
         }
-
-        if StreamURL.looksLikeMpegTS(urlString) {
-            onError("Pane \(paneIndex + 1): MPEG-TS may fail — use HLS from Channels DVR")
+        let delay = showChrome ? paneIndex * 350 : 0
+        if delay == 0 {
+            armed = true
+            return
         }
-
-        let item = AVPlayerItem(url: url)
-        endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemFailedToPlayToEndTime,
-            object: item,
-            queue: .main
-        ) { [weak self] note in
-            let message = (note.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error)?
-                .localizedDescription ?? "playback failed"
-            Task { @MainActor in
-                self?.onError?("Pane \(paneIndex + 1): \(message)")
+        armed = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(delay)) {
+            if startToken == token {
+                armed = true
             }
-        }
-        statusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
-            guard item.status == .failed else { return }
-            let message = item.error?.localizedDescription ?? "failed to load"
-            Task { @MainActor in
-                self?.onError?("Pane \(paneIndex + 1): \(message)")
-            }
-        }
-        errorObservation = item.observe(\.error, options: [.new]) { [weak self] item, _ in
-            guard let err = item.error else { return }
-            Task { @MainActor in
-                self?.onError?("Pane \(paneIndex + 1): \(err.localizedDescription)")
-            }
-        }
-
-        player.replaceCurrentItem(with: item)
-        applyVolume(slotHasAudio: slot.audio)
-        updateNowPlaying(title: slot.title)
-
-        let delay = UInt64(paneIndex) * 250_000_000
-        startTask = Task {
-            try? await Task.sleep(nanoseconds: delay)
-            guard !Task.isCancelled else { return }
-            player.play()
         }
     }
 
-    func applyVolume(slotHasAudio: Bool) {
-        self.slotHasAudio = slotHasAudio
-        let vol = AudioController.shared.effectiveVolume(slotHasAudioFocus: slotHasAudio)
-        player.volume = vol
-        player.isMuted = vol <= 0.0001
+    private func fail(_ message: String) {
+        failed = true
+        onError(message)
     }
 
-    func teardown(keepPlayer: Bool = false) {
-        startTask?.cancel()
-        startTask = nil
-        if let endObserver {
-            NotificationCenter.default.removeObserver(endObserver)
-            self.endObserver = nil
-        }
-        statusObservation?.invalidate()
-        statusObservation = nil
-        errorObservation?.invalidate()
-        errorObservation = nil
-        player.pause()
-        if !keepPlayer {
-            player.replaceCurrentItem(with: nil)
-        }
+    private func applyVolume() {
+        let vol = AudioController.shared.effectiveVolume(slotHasAudioFocus: slot.audio)
+        coordinator.playbackVolume = vol
+        coordinator.isMuted = vol <= 0.0001
     }
 
-    private func updateNowPlaying(title: String?) {
-        guard slotHasAudio else { return }
-        var info: [String: Any] = [
-            MPMediaItemPropertyTitle: title ?? "TVMaestro",
+    private func updateNowPlaying() {
+        guard slot.audio, slot.isPlayable else { return }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+            MPMediaItemPropertyTitle: slot.title ?? "TVMaestro",
             MPMediaItemPropertyArtist: "TVMaestro",
         ]
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 }

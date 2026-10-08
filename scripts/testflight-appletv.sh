@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# Build + upload TVMaestro to TestFlight — same Apple account as Big Stick Invitational.
+# Build + upload TVMaestro to TestFlight.
 #
-# Big Stick uses:  cd apps/mobile && npx eas build --platform ios --profile production --auto-submit
-# TVMaestro (native tvOS) uses Fastlane instead — EAS does not build tvOS Swift apps.
+# Native tvOS builds go through Fastlane.
 #
 # One-time:
 #   1. App Store Connect → Apps → + → tvOS app, bundle ID com.tvmaestro.client
 #   2. Copy numeric Apple ID into appletv/testflight.json → ascAppId
-#   3. export APPLE_TEAM_ID=XXXXXXXXXX   # same team as BSI
+#   3. export APPLE_TEAM_ID=XXXXXXXXXX
 #   4. export FASTLANE_USER=your@email.com
 #
 # Or register automatically:
@@ -62,7 +61,7 @@ fi
 export PATH="$(dirname "$xcodebuild_bin"):$PATH"
 
 if [[ -z "${FASTLANE_USER:-}" ]]; then
-  echo "Apple ID for TestFlight (same as Big Stick / EAS):"
+  echo "Apple ID for TestFlight:"
   read -r FASTLANE_USER
   export FASTLANE_USER
 fi
