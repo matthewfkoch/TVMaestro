@@ -104,7 +104,7 @@ jobs:
           if-no-files-found: error
 
   appletv:
-    name: Apple TV (simulator)
+    name: Apple TV
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -112,13 +112,13 @@ jobs:
         run: |
           sudo xcode-select -s /Applications/Xcode_26.3.app
           xcodebuild -version
-      - name: Build for tvOS Simulator
+      - name: Build for tvOS
         run: |
           chmod +x scripts/build-appletv.sh
           scripts/build-appletv.sh
       - name: Upload app bundle
         uses: actions/upload-artifact@v4
         with:
-          name: appletv-simulator-app
+          name: appletv-app
           path: appletv/build/Build/Products/**/TVMaestro.app
-          if-no-files-found: warn
+          if-no-files-found: error
