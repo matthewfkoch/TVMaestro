@@ -57,6 +57,12 @@ jobs:
           printf '%s' "$ASC_PRIVATE_KEY" > "$KEY_PATH"
           echo "ASC_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
+      - name: Select Xcode
+        if: steps.asc.outputs.enabled == 'true'
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app
+          xcodebuild -version
+
       - name: Upload to TestFlight
         if: steps.asc.outputs.enabled == 'true'
         env:
