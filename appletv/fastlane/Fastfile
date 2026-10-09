@@ -145,13 +145,18 @@ platform :tvos do
 
   def signing_xcargs(team_id)
     args = ["-allowProvisioningUpdates", "DEVELOPMENT_TEAM=#{team_id}"]
-    key_path = ENV["ASC_API_KEY_PATH"]
-    key_id = ENV["ASC_KEY_ID"]
-    issuer_id = ENV["ASC_ISSUER_ID"]
-    if key_path && !key_path.empty? && key_id && !key_id.empty? && issuer_id && !issuer_id.empty?
-      args << "-authenticationKeyPath #{key_path}"
-      args << "-authenticationKeyID #{key_id}"
-      args << "-authenticationKeyIssuerID #{issuer_id}"
+    # GitHub has no Apple ID session, so the runner must sign with the API key.
+    # A local Mac already signed into Xcode can create the App Store certificate;
+    # passing the API key there blocks that and fails cloud signing.
+    if ENV["GITHUB_ACTIONS"] == "true"
+      key_path = ENV["ASC_API_KEY_PATH"]
+      key_id = ENV["ASC_KEY_ID"]
+      issuer_id = ENV["ASC_ISSUER_ID"]
+      if key_path && !key_path.empty? && key_id && !key_id.empty? && issuer_id && !issuer_id.empty?
+        args << "-authenticationKeyPath #{key_path}"
+        args << "-authenticationKeyID #{key_id}"
+        args << "-authenticationKeyIssuerID #{issuer_id}"
+      end
     end
     args.join(" ")
   end
