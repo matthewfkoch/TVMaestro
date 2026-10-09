@@ -22,6 +22,9 @@ struct ContentView: View {
                     guidePaired: app.guidePaired,
                     guideSeen: app.guideSeen,
                     problem: app.lastError,
+                    onPreview: {
+                        app.startPreview()
+                    },
                     onSettings: {
                         showSettings = true
                     }
@@ -29,7 +32,7 @@ struct ContentView: View {
             }
         }
         .onPlayPauseCommand {
-            // Siri Remote play/pause — show chrome; streams keep running unless stopped from web/Menu.
+            // Play/pause on the remote shows chrome. Streams keep running unless stopped from the guide or Menu.
             app.flashChrome()
         }
         .onExitCommand {
@@ -88,6 +91,13 @@ struct ContentView: View {
 
             Spacer()
 
+            if app.isPreview {
+                Text(PreviewSession.credit)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.muted)
+                    .padding(.bottom, app.chromeVisible ? 8 : 36)
+            }
+
             if app.chromeVisible {
                 HStack(alignment: .bottom, spacing: 32) {
                     Text("Menu stops playback")
@@ -113,13 +123,21 @@ struct ContentView: View {
     }
 }
 
+private enum IdleButton: Hashable {
+    case preview
+    case settings
+}
+
 struct IdleView: View {
     let addresses: [String]
     let port: Int
     let guidePaired: Bool
     let guideSeen: Bool
     let problem: String?
+    var onPreview: () -> Void
     var onSettings: () -> Void
+
+    @FocusState private var focusedButton: IdleButton?
 
     var body: some View {
         ZStack {
@@ -176,11 +194,16 @@ struct IdleView: View {
                     }
                 }
 
-                HStack {
+                HStack(spacing: 24) {
                     Spacer()
+                    Button("Preview", action: onPreview)
+                        .buttonStyle(.borderedProminent)
+                        .focused($focusedButton, equals: .preview)
                     Button("Settings", action: onSettings)
                         .buttonStyle(.bordered)
+                        .focused($focusedButton, equals: .settings)
                 }
+                .defaultFocus($focusedButton, .preview)
             }
             .padding(.horizontal, 80)
             .padding(.vertical, 64)
@@ -220,9 +243,9 @@ struct IdleView: View {
             return "Waiting for the guide to start a session."
         }
         if guideSeen {
-            return "Open Edit device in the guide and enter the PIN shown on this Apple TV."
+            return "Open Edit device in the guide and enter the PIN shown on this device."
         }
-        return "In the guide, choose + Device, then Apple TV, and enter the address."
+        return "In the guide, choose + Device and enter the address."
     }
 
     /// Build a String first. `Text("\(port)")` is a localized number and prints `9,093`.

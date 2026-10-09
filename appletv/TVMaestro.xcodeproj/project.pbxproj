@@ -23,6 +23,11 @@
 		C0FFEE01A1A2B3C4D5E6F002 /* KSPlayerUI in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE01A1A2B3C4D5E6F012 /* KSPlayerUI */; };
 		C0FFEE01A1A2B3C4D5E6F003 /* FFmpegKit in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE01A1A2B3C4D5E6F013 /* FFmpegKit */; };
 		F11A7C3E9B2D4A6081C5D7E3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F11A7C3E9B2D4A6081C5D7E2 /* PrivacyInfo.xcprivacy */; };
+		B0B1C2D3E4F5061728394A01 /* PreviewSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0B1C2D3E4F5061728394A01 /* PreviewSession.swift */; };
+		D0B1C2D3E4F5061728394A11 /* preview-nature.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C0B1C2D3E4F5061728394A11 /* preview-nature.mp4 */; };
+		D0B1C2D3E4F5061728394A12 /* preview-afternoon.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C0B1C2D3E4F5061728394A12 /* preview-afternoon.mp4 */; };
+		D0B1C2D3E4F5061728394A13 /* preview-movie.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C0B1C2D3E4F5061728394A13 /* preview-movie.mp4 */; };
+		D0B1C2D3E4F5061728394A14 /* preview-kids.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C0B1C2D3E4F5061728394A14 /* preview-kids.mp4 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +46,11 @@
 		A8E267A3CF1141CDAA0F6365 /* TinyHTTPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinyHTTPServer.swift; sourceTree = "<group>"; };
 		A90A4C9A15474D09B707126A /* LocalIP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalIP.swift; sourceTree = "<group>"; };
 		F11A7C3E9B2D4A6081C5D7E2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A0B1C2D3E4F5061728394A01 /* PreviewSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSession.swift; sourceTree = "<group>"; };
+		C0B1C2D3E4F5061728394A11 /* preview-nature.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "preview-nature.mp4"; sourceTree = "<group>"; };
+		C0B1C2D3E4F5061728394A12 /* preview-afternoon.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "preview-afternoon.mp4"; sourceTree = "<group>"; };
+		C0B1C2D3E4F5061728394A13 /* preview-movie.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "preview-movie.mp4"; sourceTree = "<group>"; };
+		C0B1C2D3E4F5061728394A14 /* preview-kids.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "preview-kids.mp4"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -79,6 +89,11 @@
 				A31252BCA8584220A7A13828 /* ContentView.swift */,
 				A27D49460AA34EABA9A1754A /* PlayerGridView.swift */,
 				A105B19D34F94B059B9942A7 /* SettingsView.swift */,
+				A0B1C2D3E4F5061728394A01 /* PreviewSession.swift */,
+				C0B1C2D3E4F5061728394A11 /* preview-nature.mp4 */,
+				C0B1C2D3E4F5061728394A12 /* preview-afternoon.mp4 */,
+				C0B1C2D3E4F5061728394A13 /* preview-movie.mp4 */,
+				C0B1C2D3E4F5061728394A14 /* preview-kids.mp4 */,
 				A3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets */,
 				A52231E8CF9744FCD8DB28280 /* Info.plist */,
 				F11A7C3E9B2D4A6081C5D7E2 /* PrivacyInfo.xcprivacy */,
@@ -164,6 +179,10 @@
 			files = (
 				3B4DA63D1B4144CFB6C5A821 /* Assets.xcassets in Resources */,
 				F11A7C3E9B2D4A6081C5D7E3 /* PrivacyInfo.xcprivacy in Resources */,
+				D0B1C2D3E4F5061728394A11 /* preview-nature.mp4 in Resources */,
+				D0B1C2D3E4F5061728394A12 /* preview-afternoon.mp4 in Resources */,
+				D0B1C2D3E4F5061728394A13 /* preview-movie.mp4 in Resources */,
+				D0B1C2D3E4F5061728394A14 /* preview-kids.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -185,6 +204,7 @@
 				331252BCA8584220A7A13828 /* ContentView.swift in Sources */,
 				727D49460AA34EABA9A1754A /* PlayerGridView.swift in Sources */,
 				9105B19D34F94B059B9942A7 /* SettingsView.swift in Sources */,
+				B0B1C2D3E4F5061728394A01 /* PreviewSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,7 +311,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TVMaestro/Info.plist;
@@ -317,7 +337,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TVMaestro/Info.plist;

@@ -17,6 +17,7 @@ final class AppModel: ObservableObject {
     @Published var chromeVisible = true
     @Published var guideSeen = false
     @Published var guidePaired = false
+    @Published var isPreview = false
 
     private var server: ControlServer?
     private var volumeListener: UUID?
@@ -128,7 +129,17 @@ final class AppModel: ObservableObject {
         restartServer()
     }
 
-    func applySession(_ session: PlaybackSession?, warning: String? = nil) {
+    func startPreview() {
+        guard let session = PreviewSession.make() else {
+            lastError = "Sample clips are missing."
+            statusLine = lastError ?? "Sample clips are missing."
+            return
+        }
+        applySession(session, preview: true)
+    }
+
+    func applySession(_ session: PlaybackSession?, warning: String? = nil, preview: Bool = false) {
+        isPreview = preview && session?.slots.contains(where: \.isPlayable) == true
         self.session = session
         streamWarning = warning
         UIApplication.shared.isIdleTimerDisabled = session?.slots.contains(where: \.isPlayable) == true

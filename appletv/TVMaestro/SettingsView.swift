@@ -20,8 +20,8 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.dim)
                 }
 
-                Section("This Apple TV") {
-                    LabeledContent("tvOS", value: UIDevice.current.systemVersion)
+                Section("This device") {
+                    LabeledContent("System", value: UIDevice.current.systemVersion)
                     LabeledContent("Playback", value: Self.streamLine)
                     ForEach(app.localAddresses, id: \.self) { ip in
                         LabeledContent("Address", value: "\(ip):\(app.port)")
@@ -43,7 +43,7 @@ struct SettingsView: View {
                 }
 
                 Section("Volume") {
-                    Text("Volume and mute change the level of the stream that has audio. The Siri Remote still controls the television itself. This app cannot turn the TV on or off.")
+                    Text("Volume and mute change the level of the stream that has audio. The remote still controls the television.")
                         .font(.footnote)
                         .foregroundStyle(Theme.dim)
                     Button("Test volume up") {
@@ -86,11 +86,11 @@ struct SettingsView: View {
 
     private var guideHelp: String {
         if app.guidePaired {
-            return "The guide can open this app. The Apple TV itself still has to be awake. Menu on the remote stops playback."
+            return "The guide can open this app. The device itself still has to be awake. Menu on the remote stops playback."
         }
         if app.guideSeen {
-            return "In the guide, open Edit device and enter the PIN shown on this Apple TV."
+            return "In the guide, open Edit device and enter the PIN shown on this device."
         }
-        return "In the guide, choose + Device, then Apple TV, and enter the address above."
+        return "In the guide, choose + Device and enter the address above."
     }
 }

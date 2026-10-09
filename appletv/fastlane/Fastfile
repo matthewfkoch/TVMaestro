@@ -119,6 +119,30 @@ platform :tvos do
     upload_to_app_store(**upload_args)
   end
 
+  desc "Upload tvOS screenshots only (no binary, no metadata, no review submission)"
+  lane :screenshots do
+    cfg = testflight_config
+    version = get_version_number(
+      xcodeproj: "TVMaestro.xcodeproj",
+      target: "TVMaestro"
+    )
+
+    upload_args = upload_credentials_hash.merge(
+      app_identifier: cfg["bundleId"] || "com.tvmaestro.client",
+      app_version: version,
+      platform: "appletvos",
+      team_id: resolve_team_id,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      overwrite_screenshots: true,
+      submit_for_review: false,
+      force: true,
+      run_precheck_before_submit: false
+    )
+
+    upload_to_app_store(**upload_args)
+  end
+
   def signing_xcargs(team_id)
     args = ["-allowProvisioningUpdates", "DEVELOPMENT_TEAM=#{team_id}"]
     key_path = ENV["ASC_API_KEY_PATH"]

@@ -30,7 +30,7 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>TVMaestro listens on your LAN so the web guide can start and stop playback on this Apple TV.</string>
+	<string>TVMaestro listens on your local network so the guide can start and stop playback on this device.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>

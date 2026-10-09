@@ -47,6 +47,14 @@ Build App Store IPA locally (no upload)
 
 Upload tvOS App Store listing only (no binary, no review submission)
 
+### tvos screenshots
+
+```sh
+[bundle exec] fastlane tvos screenshots
+```
+
+Upload tvOS screenshots only (no binary, no metadata, no review submission)
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

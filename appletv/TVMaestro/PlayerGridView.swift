@@ -97,6 +97,11 @@ struct SlotPlayerView: View {
                     .onFinish { _, error in
                         if let error {
                             fail("Pane \(paneIndex + 1): \(error.localizedDescription)")
+                            return
+                        }
+                        // Bundled samples are short files. Play them again so the grid stays up.
+                        if playURL.isFileURL {
+                            coordinator.seek(time: 0)
                         }
                     }
             } else if playURL == nil {

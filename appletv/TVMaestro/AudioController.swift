@@ -71,7 +71,7 @@ final class AudioController: @unchecked Sendable {
             "volume": true,
             "mute": true,
             "method": "player_gain",
-            "power_detail": "tvOS cannot wake/sleep the TV from this app. Use the Siri Remote or Apple TV HDMI-CEC system settings. Volume/mute adjust in-app gain on the audio-focus stream.",
+            "power_detail": "This app cannot wake or sleep the television. Use the remote or the television system settings. Volume and mute adjust in-app gain on the audio-focus stream.",
             "gain": gain,
             "muted": isMuted,
         ]

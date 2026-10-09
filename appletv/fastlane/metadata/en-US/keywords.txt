@@ -1,1 +1,1 @@
-channels,dvr,guide,multiview,live tv,player,home,network,tuner,epg
+multiview,player,home,network,live tv,guide,tuner,recordings,streams
