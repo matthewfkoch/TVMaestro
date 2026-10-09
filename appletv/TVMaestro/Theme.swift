@@ -13,3 +13,32 @@ enum Theme {
     static let panel = panelSolid
     static let panelStroke = Color.white.opacity(0.16)
 }
+
+struct PanelCard<Content: View>: View {
+    let title: String
+    var minHeight: CGFloat
+    private let content: Content
+
+    init(title: String, minHeight: CGFloat = 180, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.minHeight = minHeight
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(title.uppercased())
+                .font(.caption.weight(.semibold))
+                .tracking(1.4)
+                .foregroundStyle(Theme.muted)
+            content
+        }
+        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
+        .padding(28)
+        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Theme.panelStroke, lineWidth: 1)
+        )
+    }
+}

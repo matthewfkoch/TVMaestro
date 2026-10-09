@@ -1,4 +1,4 @@
-There is no account. On the first screen, select Preview.
+There is no account. On the first screen, open Settings, then select Preview.
 
 That plays four sample pictures, with sound on one. The remote changes the television volume. Menu stops playback.
 

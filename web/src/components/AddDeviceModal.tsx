@@ -77,7 +77,8 @@ export default function AddDeviceModal({ open, onClose, onAdded }: Props) {
           {platform === "tvos" && (
             <p style={{ margin: 0, color: "var(--text-dim)", fontSize: "0.8rem" }}>
               Use the address on the Apple TV app’s idle screen. After adding, pair it under Edit so the
-              guide can open the app. The Apple TV has to be awake.
+              guide can wake the Apple TV and open the app. The television turns on only if Control TVs
+              and Receivers is enabled on the Apple TV.
             </p>
           )}
         </div>

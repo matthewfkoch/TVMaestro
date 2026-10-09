@@ -129,7 +129,11 @@ export default function DeviceBar({
                   <button
                     type="button"
                     className="btn"
-                    title="Wake (Android TV Remote or adb) — TV follows via CEC"
+                    title={
+                      isAppleTvDevice(d)
+                        ? "Wake the Apple TV. The television follows only if Control TVs and Receivers is on."
+                        : "Wake (Android TV Remote or adb) — TV follows via CEC"
+                    }
                     onClick={() => onCec(d.id, "power_on")}
                   >
                     Wake
@@ -137,7 +141,11 @@ export default function DeviceBar({
                   <button
                     type="button"
                     className="btn"
-                    title="Sleep (Android TV Remote or adb) — TV follows via CEC"
+                    title={
+                      isAppleTvDevice(d)
+                        ? "Sleep the Apple TV. The television follows only if Control TVs and Receivers is on."
+                        : "Sleep (Android TV Remote or adb) — TV follows via CEC"
+                    }
                     onClick={() => onCec(d.id, "power_off")}
                   >
                     Sleep

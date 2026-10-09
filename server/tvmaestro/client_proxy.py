@@ -218,18 +218,99 @@ async def remote_power(device: Device, *, on: bool) -> bool:
         return False
 
 
+async def appletv_power(device: Device, *, on: bool) -> dict[str, Any]:
+    """Wake or sleep a paired Apple TV over Companion. Does not use adb or client HTTP."""
+    action = "power_on" if on else "power_off"
+    if not appletv_remote.has_credentials(device.id):
+        return {
+            "success": False,
+            "action": action,
+            "method": "appletv_companion",
+            "message": (
+                "Pair this Apple TV first (Edit device → Pair). A PIN appears on the Apple TV."
+            ),
+        }
+    try:
+        await appletv_remote.set_power(device, on=on)
+    except appletv_remote.RemoteError as exc:
+        return {
+            "success": False,
+            "action": action,
+            "method": "appletv_companion",
+            "message": str(exc),
+        }
+    verb = "wake" if on else "sleep"
+    return {
+        "success": True,
+        "action": action,
+        "method": "appletv_companion",
+        "message": (
+            f"Apple TV Companion {verb}. The television follows only if "
+            "Control TVs and Receivers is on."
+        ),
+    }
+
+
+async def appletv_volume(device: Device, action: CecAction) -> dict[str, Any]:
+    """Volume and mute for Apple TV: Companion HID, same keys as the Siri Remote."""
+    if not appletv_remote.has_credentials(device.id):
+        return {
+            "success": False,
+            "action": action.value,
+            "method": "appletv_companion",
+            "message": (
+                "Pair this Apple TV first (Edit device → Pair). "
+                "A PIN appears on the Apple TV. Volume then follows the Siri Remote."
+            ),
+        }
+    try:
+        await appletv_remote.adjust_volume(device, action.value)
+    except appletv_remote.RemoteError as exc:
+        return {
+            "success": False,
+            "action": action.value,
+            "method": "appletv_companion",
+            "message": str(exc),
+        }
+    labels = {
+        CecAction.volume_up: "Volume up",
+        CecAction.volume_down: "Volume down",
+        CecAction.mute: "Mute",
+    }
+    return {
+        "success": True,
+        "action": action.value,
+        "method": "appletv_companion",
+        "message": (
+            f"{labels.get(action, action.value)} sent the same way as the Siri Remote. "
+            "The television follows only if Control TVs and Receivers is on."
+        ),
+    }
+
+
 async def cec(device: Device, action: CecAction, timeout: float = 5.0) -> dict[str, Any]:
     """Send CEC / power action.
 
-    Volume/mute → Android client (AudioManager → CEC).
+    Volume/mute → Android AudioManager, or Apple TV Companion (Siri Remote keys).
 
-    Wake/Sleep order:
-      1. Android TV Remote (paired) — no ADB
-      2. adb WAKEUP/SLEEP — fallback when unpaired or remote fails
-      3. Client HTTP (rarely works for power on Shield)
+    Wake/Sleep:
+      Apple TV → Companion turn_on / turn_off when paired
+      Android:
+        1. Android TV Remote (paired) — no ADB
+        2. adb WAKEUP/SLEEP — fallback when unpaired or remote fails
+        3. Client HTTP (rarely works for power on Shield)
     """
+    if appletv_remote.is_apple_tv(device) and action in (
+        CecAction.volume_up,
+        CecAction.volume_down,
+        CecAction.mute,
+    ):
+        return await appletv_volume(device, action)
+
     if action in (CecAction.power_on, CecAction.power_off):
         on = action == CecAction.power_on
+        if appletv_remote.is_apple_tv(device):
+            return await appletv_power(device, on=on)
         if await remote_power(device, on=on):
             return {
                 "success": True,

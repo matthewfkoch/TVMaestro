@@ -133,8 +133,16 @@ export const api = {
     body: { name?: string; host?: string; port?: number; token?: string },
   ) => req<Device>(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteDevice: (id: string) => req<{ ok: boolean }>(`/api/devices/${id}`, { method: "DELETE" }),
-  cec: (id: string, action: string) =>
-    req(`/api/devices/${id}/cec`, { method: "POST", body: JSON.stringify({ action }) }),
+  cec: async (id: string, action: string) => {
+    const body = await req<{ success?: boolean; message?: string }>(
+      `/api/devices/${id}/cec`,
+      { method: "POST", body: JSON.stringify({ action }) },
+    );
+    if (body?.success === false) {
+      throw new Error(body.message || "That control did not succeed");
+    }
+    return body;
+  },
   pairStatus: (id: string) =>
     req<{ requires_pairing: boolean; paired: boolean; has_certs: boolean; method: string }>(
       `/api/devices/${id}/pair/status`,

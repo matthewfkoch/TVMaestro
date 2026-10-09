@@ -5,51 +5,105 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var showSettings = false
     @StateObject private var audioTick = AudioTick()
+    @FocusState private var playbackFocus: PlaybackFocus?
 
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
 
             if let session = app.session, session.slots.contains(where: \.isPlayable) {
-                PlayerGridView(session: session, audioTick: audioTick) { message in
-                    app.reportPlaybackError(message)
+                ZStack {
+                    PlayerGridView(session: session, audioTick: audioTick) { message in
+                        app.reportPlaybackError(message)
+                    }
+                    playbackFocusSurface
+                    playbackChrome
                 }
-                playbackChrome
-            } else {
+                .defaultPlaybackFocus(!showSettings, $playbackFocus, chromeVisible: app.chromeVisible)
+            } else if !showSettings {
                 IdleView(
                     addresses: app.localAddresses,
                     port: app.port,
                     guidePaired: app.guidePaired,
                     guideSeen: app.guideSeen,
                     problem: app.lastError,
-                    onPreview: {
-                        app.startPreview()
-                    },
+                    holdsFocus: !showSettings,
                     onSettings: {
                         showSettings = true
                     }
                 )
             }
         }
-        .onPlayPauseCommand {
-            // Play/pause on the remote shows chrome. Streams keep running unless stopped from the guide or Menu.
-            app.flashChrome()
-        }
         .onExitCommand {
-            if app.isPlaying {
-                app.stopPlayback()
-            } else if showSettings {
+            // Menu closes settings. Playback Menu is handled by the focused surface
+            // or the Settings button when settings is closed.
+            if showSettings {
                 showSettings = false
+            } else if app.isPlaying {
+                app.stopPlayback()
             }
         }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-                .environmentObject(app)
+        .overlay {
+            ZStack {
+                if showSettings {
+                    SettingsView(onClose: { showSettings = false })
+                        .environmentObject(app)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: showSettings)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 app.resumeFromForeground()
             }
+        }
+        .onChange(of: app.isPlaying) { _, _ in
+            syncPlaybackFocus()
+        }
+        .onChange(of: app.chromeVisible) { _, _ in
+            syncPlaybackFocus()
+        }
+        .onChange(of: showSettings) { _, _ in
+            syncPlaybackFocus()
+        }
+    }
+
+    /// Menu only reaches a focused view. The video panes are not focusable, and the
+    /// Settings button leaves the tree when the bar hides, so this surface holds focus
+    /// whenever the bar is hidden.
+    private var playbackFocusSurface: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea()
+            .focusable(!app.chromeVisible && !showSettings)
+            .focusEffectDisabled()
+            .focused($playbackFocus, equals: .surface)
+            .onExitCommand {
+                if showSettings {
+                    showSettings = false
+                } else {
+                    app.stopPlayback()
+                }
+            }
+            .onPlayPauseCommand { showPlaybackChrome() }
+            .onAppear { syncPlaybackFocus() }
+    }
+
+    private func showPlaybackChrome() {
+        // Play/pause on the remote shows chrome. Streams keep running unless stopped from the guide or Menu.
+        app.flashChrome()
+    }
+
+    private func syncPlaybackFocus() {
+        guard app.isPlaying, !showSettings else { return }
+        let target: PlaybackFocus = app.chromeVisible ? .settings : .surface
+        playbackFocus = target
+        // The surface becomes focusable, or the Settings button enters the tree, in this
+        // update. Assign again after that focus target exists.
+        Task { @MainActor in
+            guard app.isPlaying, !showSettings else { return }
+            playbackFocus = app.chromeVisible ? .settings : .surface
         }
     }
 
@@ -109,6 +163,16 @@ struct ContentView: View {
                         app.flashChrome()
                     }
                     .buttonStyle(.bordered)
+                    .disabled(showSettings)
+                    .focused($playbackFocus, equals: .settings)
+                    .onExitCommand {
+                        if showSettings {
+                            showSettings = false
+                        } else {
+                            app.stopPlayback()
+                        }
+                    }
+                    .onPlayPauseCommand { showPlaybackChrome() }
                 }
                 .padding(.horizontal, 48)
                 .padding(.top, 36)
@@ -123,8 +187,12 @@ struct ContentView: View {
     }
 }
 
+private enum PlaybackFocus: Hashable {
+    case surface
+    case settings
+}
+
 private enum IdleButton: Hashable {
-    case preview
     case settings
 }
 
@@ -134,7 +202,7 @@ struct IdleView: View {
     let guidePaired: Bool
     let guideSeen: Bool
     let problem: String?
-    var onPreview: () -> Void
+    var holdsFocus: Bool
     var onSettings: () -> Void
 
     @FocusState private var focusedButton: IdleButton?
@@ -157,7 +225,7 @@ struct IdleView: View {
                     .accessibilityLabel("TVMaestro")
 
                 HStack(alignment: .top, spacing: 24) {
-                    infoCard(title: "Address") {
+                    PanelCard(title: "Address") {
                         if addresses.isEmpty {
                             Text("No LAN address yet. Check Ethernet or Wi-Fi.")
                                 .font(.title3)
@@ -175,7 +243,7 @@ struct IdleView: View {
                         }
                     }
 
-                    infoCard(title: "Guide") {
+                    PanelCard(title: "Guide") {
                         statusPill
                         Text(streamLine)
                             .font(.title3.weight(.semibold))
@@ -194,16 +262,15 @@ struct IdleView: View {
                     }
                 }
 
-                HStack(spacing: 24) {
-                    Spacer()
-                    Button("Preview", action: onPreview)
-                        .buttonStyle(.borderedProminent)
-                        .focused($focusedButton, equals: .preview)
-                    Button("Settings", action: onSettings)
-                        .buttonStyle(.bordered)
-                        .focused($focusedButton, equals: .settings)
+                holdingDefaultFocus {
+                    HStack(spacing: 24) {
+                        Spacer()
+                        Button("Settings", action: onSettings)
+                            .buttonStyle(.bordered)
+                            .disabled(!holdsFocus)
+                            .focused($focusedButton, equals: .settings)
+                    }
                 }
-                .defaultFocus($focusedButton, .preview)
             }
             .padding(.horizontal, 80)
             .padding(.vertical, 64)
@@ -253,20 +320,27 @@ struct IdleView: View {
         "\(ip):\(port)"
     }
 
-    private func infoCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(title.uppercased())
-                .font(.caption.weight(.semibold))
-                .tracking(1.4)
-                .foregroundStyle(Theme.muted)
+    @ViewBuilder
+    private func holdingDefaultFocus<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if holdsFocus {
+            content().defaultFocus($focusedButton, .settings)
+        } else {
             content()
         }
-        .frame(maxWidth: .infinity, minHeight: 180, alignment: .topLeading)
-        .padding(28)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Theme.panelStroke, lineWidth: 1)
-        )
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func defaultPlaybackFocus(
+        _ enabled: Bool,
+        _ focus: FocusState<PlaybackFocus?>.Binding,
+        chromeVisible: Bool
+    ) -> some View {
+        if enabled {
+            self.defaultFocus(focus, chromeVisible ? .settings : .surface)
+        } else {
+            self
+        }
     }
 }

@@ -166,10 +166,6 @@ final class AppModel: ObservableObject {
         flashChrome()
     }
 
-    func testVolumeUp() {
-        _ = AudioController.shared.volumeUp()
-    }
-
     func flashChrome() {
         chromeVisible = true
         chromeHideTask?.cancel()

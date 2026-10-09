@@ -133,7 +133,7 @@ git push origin vX.Y.Z
 
 ### Apple TV client
 
-Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** and choose **Apple TV** with the LAN IP and port `9093`. Pair it once under **Edit device** (PIN on the Apple TV) so Tune and **Open** can launch the app when it is not in front. The Apple TV box has to be awake. The app plays the original MPEG-TS stream from Channels DVR.
+Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** and choose **Apple TV** with the LAN IP and port `9093`. Pair it once under **Edit device** (PIN on the Apple TV) so Tune and **Open** can wake the Apple TV and launch the app when it is not in front. The television turns on only if Control TVs and Receivers is enabled on the Apple TV. The app plays the original MPEG-TS stream from Channels DVR.
 
 ### TestFlight
 
@@ -197,7 +197,9 @@ Apple TV reports up to nine panes (`3x3`). Android TV reports up to four panes (
 
 ## CEC
 
-Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick). On **Apple TV**, volume/mute adjust in-app gain on the audio-focus pane (tvOS cannot inject HDMI volume keys). Wake/Sleep of the television are Android-only. A paired Apple TV can still be asked to open the TVMaestro app (`POST /api/devices/{id}/launch`, or automatically when a tune finds the app closed).
+Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick). On **Apple TV**, volume/mute send the same Companion button presses as the Siri Remote (`volume_up` / `volume_down` / `mute`) after the device is paired. The television follows only if Control TVs and Receivers is enabled on that Apple TV. Wake and Sleep of a paired Apple TV use the Companion protocol (`power_on` / `power_off`). Open still launches the app (`POST /api/devices/{id}/launch`, or automatically when a tune finds the app closed). Wake alone does not open the app.
+
+**Wake/Sleep (Apple TV):** pair once from **Edit device → Pair** (PIN on the Apple TV). The server uses the Companion protocol. The television follows only if **Control TVs and Receivers** is on.
 
 **Wake/Sleep (preferred):** pair **Android TV Remote** once from **Edit device → Pair** (PIN on the TV). The server uses the Google TV remote protocol (`androidtvremote2`) — no ADB. Enable One Touch Play / CEC TV Off in the device Power Control settings so the TV follows. Works on Shield / Google TV / Android TV (not Fire OS, not Apple TV).
 

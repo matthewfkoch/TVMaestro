@@ -114,7 +114,6 @@ struct SlotPlayerView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.black.opacity(0.45))
             }
-            paneCaption
         }
         .overlay {
             if showChrome {
@@ -138,33 +137,6 @@ struct SlotPlayerView: View {
         }
         .onChange(of: audioTick.generation) { _, _ in
             applyVolume()
-        }
-    }
-
-    @ViewBuilder
-    private var paneCaption: some View {
-        let title = slot.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let showSpeaker = showChrome && slot.audio && slot.isPlayable
-        if showSpeaker || !title.isEmpty {
-            HStack(spacing: 8) {
-                if showSpeaker {
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.title3)
-                        .foregroundStyle(Theme.accent)
-                        .padding(8)
-                        .background(Theme.panel.opacity(0.92), in: Circle())
-                }
-                if !title.isEmpty {
-                    Text(title)
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(Theme.text)
-                        .lineLimit(1)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Theme.panel.opacity(0.92), in: Capsule())
-                }
-            }
-            .padding(12)
         }
     }
 
@@ -205,9 +177,12 @@ struct SlotPlayerView: View {
     }
 
     private func applyVolume() {
-        let vol = AudioController.shared.effectiveVolume(slotHasAudioFocus: slot.audio)
+        // Full scale on the audible pane. Guide volume uses the Siri Remote path,
+        // so this player must not apply a second gain.
+        let audible = slot.audio
+        let vol: Float = audible ? 1 : 0
         coordinator.playbackVolume = vol
-        coordinator.isMuted = vol <= 0.0001
+        coordinator.isMuted = !audible
     }
 
     private func updateNowPlaying() {

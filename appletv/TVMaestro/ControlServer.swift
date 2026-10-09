@@ -211,12 +211,9 @@ final class ControlServer {
         let action = (try? JSONDecoder().decode(CecBody.self, from: body))?.action?.lowercased()
         let ok: Bool
         switch action {
-        case "volume_up":
-            ok = audio.volumeUp()
-        case "volume_down":
-            ok = audio.volumeDown()
-        case "mute":
-            ok = audio.toggleMute()
+        case "volume_up", "volume_down", "mute":
+            // The guide sends these over Companion, matching the Siri Remote.
+            ok = false
         case "power_on", "power_off":
             ok = false
         default:

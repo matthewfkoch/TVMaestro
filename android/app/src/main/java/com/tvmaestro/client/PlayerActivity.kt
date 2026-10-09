@@ -13,7 +13,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.GridLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -261,7 +260,6 @@ class PlayerActivity : AppCompatActivity() {
             view.player = player
             cell.addView(view)
             cell.addView(errorLabel)
-            addTitleChip(cell, slot, multi)
             if (multi) addStroke(cell, audio = slot.audio)
             grid.addView(cell)
             views.add(view)
@@ -288,50 +286,6 @@ class PlayerActivity : AppCompatActivity() {
                 )
             }
         cell.addView(stroke)
-    }
-
-    private fun addTitleChip(cell: FrameLayout, slot: SessionSlot, multi: Boolean) {
-        val title = slot.title?.trim().orEmpty()
-        val showSpeaker = multi && slot.audio && slot.isPlayable()
-        if (title.isEmpty() && !showSpeaker) return
-        val row =
-            LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                val pad = dp(12)
-                setPadding(pad, pad, pad, pad)
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.BOTTOM or Gravity.START,
-                )
-            }
-        if (showSpeaker) {
-            val icon =
-                ImageView(this).apply {
-                    setImageResource(R.drawable.ic_speaker)
-                    contentDescription = "Audio"
-                    layoutParams = LinearLayout.LayoutParams(dp(18), dp(18)).apply {
-                        marginEnd = dp(8)
-                    }
-                }
-            row.addView(icon)
-        }
-        if (title.isNotEmpty()) {
-            val label =
-                TextView(this).apply {
-                    text = title
-                    setTextColor(getColor(R.color.text))
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                    maxLines = 1
-                    background = getDrawable(R.drawable.bg_chip)
-                    val h = dp(10)
-                    val v = dp(6)
-                    setPadding(h, v, h, v)
-                }
-            row.addView(label)
-        }
-        cell.addView(row)
     }
 
     private fun paneErrorLabel(): TextView =

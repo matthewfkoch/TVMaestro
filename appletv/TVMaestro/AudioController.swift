@@ -1,8 +1,8 @@
 import AVFoundation
 import Foundation
 
-/// App-level gain / mute applied to the audio-focus pane.
-/// tvOS cannot inject HDMI-CEC volume keys; this mirrors Android's usable volume path inside the player.
+/// Playback stays at full scale. Guide volume and mute are the Siri Remote's
+/// volume, sent by the paired guide over Companion — not a second in-app gain.
 final class AudioController: @unchecked Sendable {
     static let shared = AudioController()
 
@@ -70,8 +70,8 @@ final class AudioController: @unchecked Sendable {
             "power": false,
             "volume": true,
             "mute": true,
-            "method": "player_gain",
-            "power_detail": "This app cannot wake or sleep the television. Use the remote or the television system settings. Volume and mute adjust in-app gain on the audio-focus stream.",
+            "method": "appletv_companion",
+            "power_detail": "Volume and mute in the guide use the same controls as the Siri Remote. Pair the Apple TV in the guide first. The television follows when Control TVs and Receivers is on.",
             "gain": gain,
             "muted": isMuted,
         ]

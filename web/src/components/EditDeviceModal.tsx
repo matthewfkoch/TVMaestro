@@ -121,7 +121,7 @@ export default function EditDeviceModal({ open, device, onClose, onSaved }: Prop
       setPin("");
       setPairMsg(
         isAppleTvDevice(device!)
-          ? "Paired — the guide can open TVMaestro on this Apple TV."
+          ? "Paired — the guide can wake this Apple TV and open TVMaestro."
           : "Paired — Wake/Sleep will use Android TV Remote (no ADB).",
       );
       onSaved();
@@ -254,13 +254,15 @@ export default function EditDeviceModal({ open, device, onClose, onSaved }: Prop
             </div>
             {showPairHelp && (
             <p style={{ margin: 0, color: "var(--text-dim)", fontSize: "0.8rem" }}>
-              Pair once (PIN on the Apple TV) so Tune and Open can launch TVMaestro when it is not in
-              front. The Apple TV has to be awake. This does not turn the television on.
+              Pair once (PIN on the Apple TV) so Tune and Open can wake the Apple TV and launch
+              TVMaestro when it is not in front. The television turns on only if Control TVs and
+              Receivers is enabled on the Apple TV.
             </p>
             )}
             {pairedNow === true && (
             <p style={{ margin: 0, color: "var(--text-dim)", fontSize: "0.8rem" }}>
-              The Apple TV has to be awake. This does not turn the television on.
+              Wake and Sleep control the Apple TV. The television follows only if Control TVs and
+              Receivers is enabled on the Apple TV.
             </p>
             )}
             {pairOpen && (

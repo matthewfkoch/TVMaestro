@@ -21,6 +21,27 @@ def _adb_available() -> bool:
     return shutil.which("adb") is not None
 
 
+def _apply_apple_companion_power(device: Device) -> bool:
+    """Keep Wake/Sleep for a paired Apple TV when the control port is down.
+
+    Returns True when the stored capability flags changed.
+    """
+    if not appletv_remote.is_apple_tv(device):
+        return False
+    cec = device.capabilities.cec
+    if appletv_remote.has_credentials(device.id):
+        if cec.power and cec.method == "appletv_companion":
+            return False
+        cec.power = True
+        cec.method = "appletv_companion"
+        return True
+    if not cec.power and cec.method == "appletv_companion":
+        return False
+    cec.power = False
+    cec.method = "appletv_companion"
+    return True
+
+
 class DeviceRegistry:
     def __init__(self) -> None:
         self._devices: dict[str, Device] = {}
@@ -81,15 +102,18 @@ class DeviceRegistry:
             if not isinstance(cec_raw, dict):
                 cec_raw = {}
             # Wake/Sleep: Android TV Remote (paired) or adb; client HDMI often blocked.
-            # Apple TV / tvOS has no adb or ATV-remote path — trust the client's cec.power flag.
+            # Apple TV power comes from Companion pairing, not the app's cec.power flag.
             platform = str(info.get("platform") or caps_raw.get("platform") or "").lower()
             is_apple_tv = platform in ("tvos", "appletv") or str(
                 caps_raw.get("chip_family") or info.get("chip_family") or ""
             ).lower() in ("apple", "appletv")
+            companion_power = is_apple_tv and appletv_remote.has_credentials(device_id)
             client_power = bool(cec_raw.get("power", False))
             remote_paired = False if is_apple_tv else androidtv_remote.has_certs(device_id)
             adb_power = False if is_apple_tv else _adb_available()
-            if remote_paired:
+            if is_apple_tv or companion_power:
+                method = "appletv_companion"
+            elif remote_paired:
                 method = "androidtv_remote"
             elif client_power:
                 method = str(cec_raw.get("method", "keys"))
@@ -98,7 +122,7 @@ class DeviceRegistry:
             else:
                 method = str(cec_raw.get("method", "keys"))
             cec = CecCapabilities(
-                power=client_power or remote_paired or adb_power,
+                power=client_power or remote_paired or adb_power or companion_power,
                 volume=bool(cec_raw.get("volume", True)),
                 mute=bool(cec_raw.get("mute", True)),
                 method=method,
@@ -141,7 +165,8 @@ class DeviceRegistry:
                     return None
                 was_online = device.online
                 device.online = False
-                if was_online:
+                power_changed = _apply_apple_companion_power(device)
+                if was_online or power_changed:
                     self._save()
                 return device
 
@@ -166,7 +191,7 @@ class DeviceRegistry:
             device.capabilities = DeviceCapabilities(
                 multiview_max=9,
                 layouts=["1", "2x1", "1x2", "2x2", "3x3"],
-                cec=CecCapabilities(power=False, volume=True, mute=True, method="player_gain"),
+                cec=CecCapabilities(power=False, volume=True, mute=True, method="appletv_companion"),
                 mpeg_ts=True,
                 hls=True,
                 weak_decoder=False,
