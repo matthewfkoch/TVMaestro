@@ -1,6 +1,6 @@
 # Pinned for reproducible Docker / CI installs.
 # Bump intentionally; prefer matching versions already validated locally.
-fastapi==0.128.8
+fastapi==0.142.2
 uvicorn[standard]==0.39.0
 httpx==0.28.1
 pydantic==2.13.4
