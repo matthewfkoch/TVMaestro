@@ -118,6 +118,20 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
           </div>
         )}
         {error && <div className="error" style={{ marginTop: "0.75rem" }}>{error}</div>}
+        {typeof navigator !== "undefined" && navigator.userAgent.includes("TVMaestroCompanion") && (
+          <div className="companion-server">
+            <span>This device</span>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                window.location.href = "tvmaestro://servers";
+              }}
+            >
+              Change server
+            </button>
+          </div>
+        )}
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
             Cancel

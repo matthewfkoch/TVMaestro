@@ -3,6 +3,7 @@ import UIKit
 
 enum ControlEvent {
     case session(PlaybackSession, warning: String?)
+    case audio(PlaybackSession)
     case stopped
     case failed(String)
     case guide(registered: Bool, paired: Bool)
@@ -69,6 +70,37 @@ final class ControlServer {
         lock.unlock()
     }
 
+    /// Moves audio to a pane that is already playing. Does not rebuild the grid.
+    @discardableResult
+    func focusAudio(at index: Int) -> Bool {
+        applyAudioFocus(index, requiredID: nil, enforceID: false)
+    }
+
+    /// Remote swipes only update the session currently on screen.
+    @discardableResult
+    func focusAudio(at index: Int, matching id: String?) -> Bool {
+        applyAudioFocus(index, requiredID: id, enforceID: true)
+    }
+
+    private func applyAudioFocus(_ index: Int, requiredID: String?, enforceID: Bool) -> Bool {
+        lock.lock()
+        guard var session = current,
+              session.slots.indices.contains(index),
+              session.slots[index].isPlayable,
+              !enforceID || session.id == requiredID
+        else {
+            lock.unlock()
+            return false
+        }
+        for i in session.slots.indices {
+            session.slots[i].audio = i == index && session.slots[i].isPlayable
+        }
+        current = session
+        lock.unlock()
+        onEvent(.audio(session))
+        return true
+    }
+
     private func handle(method: String, path: String, headers: [String: String], body: Data) -> (Int, Data, String) {
         if path.hasPrefix("/api/"), path != "/api/health", !authorized(headers) {
             return Self.json(401, ["success": false, "message": "Unauthorized"])
@@ -85,6 +117,8 @@ final class ControlServer {
             return getSession()
         case ("POST", "/api/session"):
             return setSession(body)
+        case ("POST", "/api/session/audio"):
+            return setAudio(body)
         case ("POST", "/api/session/stop"):
             return stopSession()
         case ("POST", "/api/cec"):
@@ -183,6 +217,28 @@ final class ControlServer {
 
         var payload: [String: Any] = ["success": true]
         if let obj = Self.asJSONObject(session) {
+            payload["session"] = obj
+        }
+        return Self.json(200, payload)
+    }
+
+    private func setAudio(_ body: Data) -> (Int, Data, String) {
+        struct AudioBody: Decodable { var index: Int? }
+        guard let index = (try? JSONDecoder().decode(AudioBody.self, from: body))?.index else {
+            return Self.json(400, ["success": false, "message": "Missing index"])
+        }
+        guard focusAudio(at: index) else {
+            lock.lock()
+            let playing = current != nil
+            lock.unlock()
+            let message = playing ? "No playable slot at that index" : "No session"
+            return Self.json(400, ["success": false, "message": message])
+        }
+        lock.lock()
+        let session = current
+        lock.unlock()
+        var payload: [String: Any] = ["success": true]
+        if let session, let obj = Self.asJSONObject(session) {
             payload["session"] = obj
         }
         return Self.json(200, payload)

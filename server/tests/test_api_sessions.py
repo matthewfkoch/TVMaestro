@@ -240,3 +240,138 @@ def test_push_failure_keeps_prior_playing_session(client: TestClient, registered
 def test_stop_missing_session(client: TestClient):
     resp = client.post("/api/sessions/does-not-exist/stop")
     assert resp.status_code == 404
+
+
+def _multiview(client: TestClient, device_id: str):
+    return client.post(
+        "/api/sessions",
+        json={
+            "device_id": device_id,
+            "mode": "multiview",
+            "layout": "2x2",
+            "slots": [
+                {"url": "http://dvr.example/a.ts", "title": "Alpha", "audio": True},
+                {"audio": False},
+                {"url": "http://dvr.example/b.ts", "title": "Beta", "audio": False},
+                {"url": "http://dvr.example/c.ts", "title": "Gamma", "audio": False},
+            ],
+        },
+    )
+
+
+def test_set_audio_updates_focus_without_repushing(client: TestClient, registered_device):
+    with (
+        patch("tvmaestro.client_proxy.set_audio", new=AsyncMock(return_value={"success": True})) as set_audio,
+        patch("tvmaestro.client_proxy.push_session", new=AsyncMock(return_value={"success": True})) as push,
+    ):
+        created = _multiview(client, registered_device.id)
+        assert created.status_code == 200, created.text
+        session_id = created.json()["id"]
+        push.reset_mock()
+
+        moved = client.post(f"/api/sessions/{session_id}/audio", json={"index": 2})
+        assert moved.status_code == 200, moved.text
+        assert [slot["audio"] for slot in moved.json()["slots"]] == [False, False, True, False]
+        set_audio.assert_awaited_once()
+        assert set_audio.await_args.args[1] == 2
+        push.assert_not_awaited()
+
+        stored = client.get(f"/api/sessions/{session_id}")
+        assert [slot["audio"] for slot in stored.json()["slots"]] == [False, False, True, False]
+
+
+def test_set_audio_rejects_empty_and_missing_slots(client: TestClient, registered_device):
+    with patch("tvmaestro.client_proxy.set_audio", new=AsyncMock(return_value={"success": True})) as set_audio:
+        created = _multiview(client, registered_device.id)
+        session_id = created.json()["id"]
+
+        empty = client.post(f"/api/sessions/{session_id}/audio", json={"index": 1})
+        assert empty.status_code == 400
+        assert "playable" in empty.json()["detail"]
+
+        missing = client.post(f"/api/sessions/{session_id}/audio", json={"index": 9})
+        assert missing.status_code == 400
+        set_audio.assert_not_awaited()
+
+        gone = client.post("/api/sessions/does-not-exist/audio", json={"index": 0})
+        assert gone.status_code == 404
+
+
+def test_set_audio_rejects_stopped_session(client: TestClient, registered_device):
+    created = _multiview(client, registered_device.id)
+    session_id = created.json()["id"]
+    stopped = client.post(f"/api/sessions/{session_id}/stop")
+    assert stopped.status_code == 200
+
+    with patch("tvmaestro.client_proxy.set_audio", new=AsyncMock(return_value={"success": True})):
+        resp = client.post(f"/api/sessions/{session_id}/audio", json={"index": 0})
+    assert resp.status_code == 400
+    assert "not playing" in resp.json()["detail"]
+
+
+def test_set_audio_device_failure_keeps_previous_focus(client: TestClient, registered_device):
+    created = _multiview(client, registered_device.id)
+    session_id = created.json()["id"]
+    with patch(
+        "tvmaestro.client_proxy.set_audio",
+        new=AsyncMock(side_effect=RuntimeError("device refused")),
+    ):
+        resp = client.post(f"/api/sessions/{session_id}/audio", json={"index": 2})
+    assert resp.status_code == 502
+    assert "device refused" in resp.json()["detail"]
+    stored = client.get(f"/api/sessions/{session_id}")
+    assert [slot["audio"] for slot in stored.json()["slots"]] == [True, False, False, False]
+
+
+def test_refresh_audio_reads_device_focus(client: TestClient, registered_device):
+    created = _multiview(client, registered_device.id)
+    session = created.json()
+    with patch(
+        "tvmaestro.client_proxy.get_session",
+        new=AsyncMock(
+            return_value={
+                "success": True,
+                "session": {
+                    "id": session["id"],
+                    "slots": [
+                        {"audio": False},
+                        {"audio": False},
+                        {"audio": False},
+                        {"audio": True},
+                    ],
+                },
+            }
+        ),
+    ):
+        refreshed = client.get(f"/api/sessions/{session['id']}/audio")
+    assert refreshed.status_code == 200, refreshed.text
+    assert [slot["audio"] for slot in refreshed.json()["slots"]] == [False, False, False, True]
+
+
+def test_refresh_audio_ignores_a_different_device_session(client: TestClient, registered_device):
+    created = _multiview(client, registered_device.id)
+    session = created.json()
+    with patch(
+        "tvmaestro.client_proxy.get_session",
+        new=AsyncMock(
+            return_value={
+                "success": True,
+                "session": {"id": "other-session", "slots": [{"audio": False}, {"audio": True}]},
+            }
+        ),
+    ):
+        refreshed = client.get(f"/api/sessions/{session['id']}/audio")
+    assert refreshed.status_code == 200
+    assert [slot["audio"] for slot in refreshed.json()["slots"]] == [True, False, False, False]
+
+
+def test_refresh_audio_keeps_stored_focus_when_device_is_unreachable(client: TestClient, registered_device):
+    created = _multiview(client, registered_device.id)
+    session_id = created.json()["id"]
+    with patch(
+        "tvmaestro.client_proxy.get_session",
+        new=AsyncMock(side_effect=RuntimeError("offline")),
+    ):
+        refreshed = client.get(f"/api/sessions/{session_id}/audio")
+    assert refreshed.status_code == 200
+    assert refreshed.json()["slots"][0]["audio"] is True

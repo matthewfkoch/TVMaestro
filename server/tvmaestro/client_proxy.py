@@ -185,6 +185,20 @@ async def push_session(device: Device, session: SessionState, timeout: float = 1
         return data
 
 
+async def set_audio(device: Device, index: int, timeout: float = 8.0) -> dict[str, Any]:
+    """Move audio focus without sending a new session. Clients must not restart streams."""
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(
+            f"{_base(device)}/api/session/audio",
+            headers=_headers(device),
+            json={"index": index},
+        )
+        data = read_json(resp, device)
+        if isinstance(data, dict) and data.get("success") is False:
+            raise RuntimeError(data.get("message") or "Client rejected audio change")
+        return data if isinstance(data, dict) else {"success": True}
+
+
 async def stop_session(device: Device, timeout: float = 10.0) -> dict[str, Any]:
     async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.post(

@@ -38,9 +38,13 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var chromeSettings: Button
     private val players = mutableListOf<ExoPlayer>()
     private val views = mutableListOf<PlayerView>()
+    private val playerBySlot = mutableMapOf<Int, ExoPlayer>()
+    private val strokeBySlot = mutableMapOf<Int, View>()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val tag = "PlayerActivity"
     private var hideChrome: Runnable? = null
+    private var applyingSession = false
+    private var pendingAudio: PlaybackSession? = null
 
     private val sessionListener: (PlaybackSession?) -> Unit = { session ->
         runOnUiThread { applySession(session) }
@@ -48,6 +52,10 @@ class PlayerActivity : AppCompatActivity() {
 
     private val guideListener: (Boolean) -> Unit = {
         runOnUiThread { refreshIdle() }
+    }
+
+    private val audioListener: (PlaybackSession) -> Unit = { session ->
+        runOnUiThread { applyAudio(session) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,6 +77,7 @@ class PlayerActivity : AppCompatActivity() {
 
         startControlService()
         SessionStore.addListener(sessionListener)
+        SessionStore.addAudioListener(audioListener)
         GuideReach.addListener(guideListener)
         applySession(SessionStore.current)
         refreshIdle()
@@ -81,6 +90,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         SessionStore.removeListener(sessionListener)
+        SessionStore.removeAudioListener(audioListener)
         GuideReach.removeListener(guideListener)
         hideChrome?.let { mainHandler.removeCallbacks(it) }
         mainHandler.removeCallbacksAndMessages(null)
@@ -184,6 +194,18 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun applySession(session: PlaybackSession?) {
+        applyingSession = true
+        try {
+            applySessionNow(session)
+        } finally {
+            applyingSession = false
+            val pending = pendingAudio
+            pendingAudio = null
+            if (pending != null) applyAudio(pending)
+        }
+    }
+
+    private fun applySessionNow(session: PlaybackSession?) {
         mainHandler.removeCallbacksAndMessages(null)
         hideChrome = null
         releasePlayers()
@@ -245,6 +267,7 @@ class PlayerActivity : AppCompatActivity() {
             val preferSoftware = multi && index != hwIndex
             val player = buildPlayer(preferSoftware)
             player.volume = if (slot.audio) 1f else 0f
+            playerBySlot[index] = player
             val errorLabel = paneErrorLabel()
             player.addListener(
                 object : Player.Listener {
@@ -260,7 +283,7 @@ class PlayerActivity : AppCompatActivity() {
             view.player = player
             cell.addView(view)
             cell.addView(errorLabel)
-            if (multi) addStroke(cell, audio = slot.audio)
+            if (multi) strokeBySlot[index] = addStroke(cell, audio = slot.audio)
             grid.addView(cell)
             views.add(view)
             players.add(player)
@@ -276,7 +299,27 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun addStroke(cell: FrameLayout, audio: Boolean) {
+    private fun applyAudio(session: PlaybackSession) {
+        if (applyingSession) {
+            pendingAudio = session
+            return
+        }
+        if (playerBySlot.isEmpty()) {
+            if (session.slots.any { it.isPlayable() }) applySession(session)
+            return
+        }
+        val slots = session.slots
+        for ((index, player) in playerBySlot) {
+            val audible = slots.getOrNull(index)?.let { it.audio && it.isPlayable() } == true
+            player.volume = if (audible) 1f else 0f
+        }
+        for ((index, stroke) in strokeBySlot) {
+            val audible = slots.getOrNull(index)?.let { it.audio && it.isPlayable() } == true
+            stroke.background = getDrawable(if (audible) R.drawable.pane_stroke_audio else R.drawable.pane_stroke)
+        }
+    }
+
+    private fun addStroke(cell: FrameLayout, audio: Boolean): View {
         val stroke =
             View(this).apply {
                 background = getDrawable(if (audio) R.drawable.pane_stroke_audio else R.drawable.pane_stroke)
@@ -286,6 +329,7 @@ class PlayerActivity : AppCompatActivity() {
                 )
             }
         cell.addView(stroke)
+        return stroke
     }
 
     private fun paneErrorLabel(): TextView =
@@ -351,6 +395,8 @@ class PlayerActivity : AppCompatActivity() {
         }
         players.clear()
         views.clear()
+        playerBySlot.clear()
+        strokeBySlot.clear()
         grid.removeAllViews()
     }
 }

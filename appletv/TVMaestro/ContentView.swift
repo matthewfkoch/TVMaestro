@@ -18,8 +18,21 @@ struct ContentView: View {
                     }
                     playbackFocusSurface
                     playbackChrome
+                    if let title = app.audioHUD {
+                        Text(title)
+                            .font(.headline)
+                            .lineLimit(1)
+                            .foregroundStyle(Theme.bg)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .background(Theme.accent, in: Capsule())
+                            .padding(.top, 36)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                            .allowsHitTesting(false)
+                    }
                 }
-                .defaultPlaybackFocus(!showSettings, $playbackFocus, chromeVisible: app.chromeVisible)
+                .animation(.easeInOut(duration: 0.2), value: app.audioHUD)
+                .defaultPlaybackFocus(!showSettings, $playbackFocus)
             } else if !showSettings {
                 IdleView(
                     addresses: app.localAddresses,
@@ -69,14 +82,14 @@ struct ContentView: View {
         }
     }
 
-    /// Menu only reaches a focused view. The video panes are not focusable, and the
-    /// Settings button leaves the tree when the bar hides, so this surface holds focus
-    /// whenever the bar is hidden.
+    /// Menu only reaches a focused view. The video panes are not focusable, so this
+    /// surface keeps focus during playback — including while the bar is up — and
+    /// swipes move audio instead of moving to Settings.
     private var playbackFocusSurface: some View {
         Color.clear
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
-            .focusable(!app.chromeVisible && !showSettings)
+            .focusable(!showSettings)
             .focusEffectDisabled()
             .focused($playbackFocus, equals: .surface)
             .onExitCommand {
@@ -87,7 +100,28 @@ struct ContentView: View {
                 }
             }
             .onPlayPauseCommand { showPlaybackChrome() }
+            .onMoveCommand { nudgeAudio($0) }
+            .onTapGesture {
+                guard !showSettings else { return }
+                if app.chromeVisible {
+                    playbackFocus = .settings
+                } else {
+                    showPlaybackChrome()
+                }
+            }
             .onAppear { syncPlaybackFocus() }
+    }
+
+    private func nudgeAudio(_ direction: MoveCommandDirection) {
+        guard !showSettings else { return }
+        switch direction {
+        case .left: app.moveAudio(.left)
+        case .right: app.moveAudio(.right)
+        case .up: app.moveAudio(.up)
+        case .down: app.moveAudio(.down)
+        @unknown default: break
+        }
+        playbackFocus = .surface
     }
 
     private func showPlaybackChrome() {
@@ -97,13 +131,16 @@ struct ContentView: View {
 
     private func syncPlaybackFocus() {
         guard app.isPlaying, !showSettings else { return }
-        let target: PlaybackFocus = app.chromeVisible ? .settings : .surface
-        playbackFocus = target
+        // Leave Settings focused when the viewer clicked through to it. Otherwise
+        // swipes stay on the grid, including while the bar is visible.
+        if app.chromeVisible, playbackFocus == .settings { return }
+        playbackFocus = .surface
         // The surface becomes focusable, or the Settings button enters the tree, in this
         // update. Assign again after that focus target exists.
         Task { @MainActor in
             guard app.isPlaying, !showSettings else { return }
-            playbackFocus = app.chromeVisible ? .settings : .surface
+            if app.chromeVisible, playbackFocus == .settings { return }
+            playbackFocus = .surface
         }
     }
 
@@ -173,6 +210,7 @@ struct ContentView: View {
                         }
                     }
                     .onPlayPauseCommand { showPlaybackChrome() }
+                    .onMoveCommand { nudgeAudio($0) }
                 }
                 .padding(.horizontal, 48)
                 .padding(.top, 36)
@@ -334,11 +372,10 @@ private extension View {
     @ViewBuilder
     func defaultPlaybackFocus(
         _ enabled: Bool,
-        _ focus: FocusState<PlaybackFocus?>.Binding,
-        chromeVisible: Bool
+        _ focus: FocusState<PlaybackFocus?>.Binding
     ) -> some View {
         if enabled {
-            self.defaultFocus(focus, chromeVisible ? .settings : .surface)
+            self.defaultFocus(focus, .surface)
         } else {
             self
         }

@@ -14,6 +14,7 @@ final class AppModel: ObservableObject {
     @Published var lastError: String?
     @Published var streamWarning: String?
     @Published var volumeHUD: String?
+    @Published var audioHUD: String?
     @Published var chromeVisible = true
     @Published var guideSeen = false
     @Published var guidePaired = false
@@ -22,6 +23,7 @@ final class AppModel: ObservableObject {
     private var server: ControlServer?
     private var volumeListener: UUID?
     private var hudHideTask: Task<Void, Never>?
+    private var audioHudTask: Task<Void, Never>?
     private var chromeHideTask: Task<Void, Never>?
     private let defaults = UserDefaults.standard
 
@@ -160,6 +162,19 @@ final class AppModel: ObservableObject {
         applySession(nil)
     }
 
+    /// Swipe on the Siri Remote. Empty panes are skipped. A one-pane layout does nothing.
+    func moveAudio(_ direction: AudioNudge) {
+        guard let session, session.slots.filter(\.isPlayable).count > 1 else { return }
+        guard let index = Self.nextPlayableSlot(in: session, direction: direction) else { return }
+        if server?.focusAudio(at: index, matching: session.id) == true { return }
+        var updated = session
+        for i in updated.slots.indices {
+            updated.slots[i].audio = i == index && updated.slots[i].isPlayable
+        }
+        self.session = updated
+        showAudioHUD()
+    }
+
     func reportPlaybackError(_ message: String) {
         lastError = message
         statusLine = message
@@ -176,6 +191,46 @@ final class AppModel: ObservableObject {
                 chromeVisible = false
             }
         }
+    }
+
+    private func showAudioHUD() {
+        guard let title = focusTitle, !title.isEmpty else { return }
+        audioHUD = title
+        audioHudTask?.cancel()
+        audioHudTask = Task {
+            try? await Task.sleep(nanoseconds: 1_800_000_000)
+            if !Task.isCancelled {
+                audioHUD = nil
+            }
+        }
+    }
+
+    /// Neighboring playable pane in one direction. Does not wrap around the grid.
+    private static func nextPlayableSlot(in session: PlaybackSession, direction: AudioNudge) -> Int? {
+        let (rows, cols) = LayoutGeometry.dims(session.layout)
+        guard cols > 0, rows > 0 else { return nil }
+        guard let current = session.slots.firstIndex(where: { $0.audio && $0.isPlayable })
+            ?? session.slots.firstIndex(where: \.isPlayable)
+        else { return nil }
+        var row = current / cols
+        var col = current % cols
+        func step() {
+            switch direction {
+            case .left: col -= 1
+            case .right: col += 1
+            case .up: row -= 1
+            case .down: row += 1
+            }
+        }
+        step()
+        while row >= 0, row < rows, col >= 0, col < cols {
+            let index = row * cols + col
+            if session.slots.indices.contains(index), session.slots[index].isPlayable {
+                return index
+            }
+            step()
+        }
+        return nil
     }
 
     private func showVolumeHUD() {
@@ -208,6 +263,9 @@ final class AppModel: ObservableObject {
                 switch event {
                 case .session(let s, let warning):
                     self.applySession(s, warning: warning)
+                case .audio(let s):
+                    self.session = s
+                    self.showAudioHUD()
                 case .stopped:
                     self.applySession(nil)
                 case .failed(let message):
@@ -234,4 +292,8 @@ final class AppModel: ObservableObject {
     private func idleStatus() -> String {
         idleDetail
     }
+}
+
+enum AudioNudge {
+    case left, right, up, down
 }

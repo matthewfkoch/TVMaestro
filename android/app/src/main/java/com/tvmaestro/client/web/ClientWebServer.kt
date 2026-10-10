@@ -51,6 +51,7 @@ class ClientWebServer(
                     getSession()
                 }
                 uri == "/api/session" && method == Method.POST -> setSession(session)
+                uri == "/api/session/audio" && method == Method.POST -> setAudio(session)
                 uri == "/api/session/stop" && method == Method.POST -> {
                     GuideReach.mark()
                     stopSession()
@@ -186,6 +187,28 @@ class ClientWebServer(
         val el = obj.get(key) ?: return null
         if (el.isJsonNull) return null
         return el.asString?.takeIf { it.isNotBlank() }
+    }
+
+    private fun setAudio(session: IHTTPSession): Response {
+        val current = SessionStore.current
+            ?: return json(
+                mapOf("success" to false, "message" to "No session"),
+                Response.Status.BAD_REQUEST,
+            )
+        val indexEl = body(session).get("index")
+        val index = if (indexEl == null || indexEl.isJsonNull) null else indexEl.asInt
+        if (index == null || index !in current.slots.indices || !current.slots[index].isPlayable()) {
+            return json(
+                mapOf("success" to false, "message" to "No playable slot at that index"),
+                Response.Status.BAD_REQUEST,
+            )
+        }
+        val slots = current.slots.mapIndexed { i, slot ->
+            slot.copy(audio = i == index && slot.isPlayable())
+        }
+        val updated = current.copy(slots = slots)
+        SessionStore.updateAudio(updated)
+        return json(mapOf("success" to true, "session" to updated))
     }
 
     private fun stopSession(): Response {

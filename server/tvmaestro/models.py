@@ -119,6 +119,10 @@ class SessionCreate(BaseModel):
     slots: list[SessionSlot]
 
 
+class AudioFocusRequest(BaseModel):
+    index: int
+
+
 class SessionState(BaseModel):
     id: str
     device_id: str

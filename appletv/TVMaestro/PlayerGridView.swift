@@ -126,9 +126,13 @@ struct SlotPlayerView: View {
             applyVolume()
             updateNowPlaying()
         }
-        .onChange(of: slot) { _, _ in
+        .onChange(of: slot.url) { _, _ in
             failed = false
             scheduleStart()
+            applyVolume()
+            updateNowPlaying()
+        }
+        .onChange(of: slot.audio) { _, _ in
             applyVolume()
             updateNowPlaying()
         }

@@ -28,6 +28,27 @@ def _slot_playable(slot: SessionSlot) -> bool:
     return bool(slot.url or slot.channel_id or slot.youtube_url or slot.apituner_channel)
 
 
+def _audio_index_from_device(payload: object, session: SessionState) -> Optional[int]:
+    """Index of the audible pane reported by the TV, if it still matches this session."""
+    if not isinstance(payload, dict):
+        return None
+    live = payload.get("session")
+    if not isinstance(live, dict):
+        return None
+    live_id = live.get("id")
+    if live_id and live_id != session.id:
+        return None
+    live_slots = live.get("slots")
+    if not isinstance(live_slots, list):
+        return None
+    for i, slot in enumerate(live_slots):
+        if not isinstance(slot, dict) or not slot.get("audio"):
+            continue
+        if i < len(session.slots) and _slot_playable(session.slots[i]):
+            return i
+    return None
+
+
 def _with_single_audio(slots: list[SessionSlot]) -> list[SessionSlot]:
     """Exactly one audio focus on a playable slot; empty panes stay silent."""
     focus = next((i for i, s in enumerate(slots) if s.audio and _slot_playable(s)), None)
@@ -155,6 +176,47 @@ class SessionManager:
         if self._by_device.get(session.device_id) == session_id:
             del self._by_device[session.device_id]
         return session
+
+    async def refresh_audio(self, session_id: str) -> Optional[SessionState]:
+        """Read the device's current audible pane so a remote swipe matches the guide."""
+        session = self._sessions.get(session_id)
+        if not session or session.status != "playing":
+            return session
+        device = self.devices.get(session.device_id)
+        if not device:
+            return session
+        try:
+            payload = await client_proxy.get_session(device)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Audio refresh failed for %s: %s", session_id, exc)
+            return session
+        focus = _audio_index_from_device(payload, session)
+        if focus is None:
+            return session
+        return self._store_audio(session, focus)
+
+    async def set_audio(self, session_id: str, index: int) -> SessionState:
+        session = self._sessions.get(session_id)
+        if not session:
+            raise KeyError(session_id)
+        if session.status != "playing":
+            raise ValueError("Session is not playing")
+        if index < 0 or index >= len(session.slots) or not _slot_playable(session.slots[index]):
+            raise ValueError("No playable slot at that index")
+        device = self.devices.get(session.device_id)
+        if not device:
+            raise ValueError("Unknown device")
+        await client_proxy.set_audio(device, index)
+        return self._store_audio(session, index)
+
+    def _store_audio(self, session: SessionState, index: int) -> SessionState:
+        slots = [
+            slot.model_copy(update={"audio": i == index and _slot_playable(slot)})
+            for i, slot in enumerate(session.slots)
+        ]
+        updated = session.model_copy(update={"slots": slots, "updated_at": time.time()})
+        self._sessions[session.id] = updated
+        return updated
 
     async def stop_device(self, device_id: str) -> Optional[SessionState]:
         sid = self._by_device.get(device_id)

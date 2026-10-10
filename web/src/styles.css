@@ -63,9 +63,14 @@ button {
 
 .app {
   height: 100%;
+  min-width: 0;
   display: grid;
   grid-template-rows: var(--header-h) 1fr var(--device-h);
   overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
 }
 
 .topbar {
@@ -403,6 +408,64 @@ button {
   font-size: 0.75rem;
 }
 
+.audio-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.audio-picker {
+  position: fixed;
+  z-index: 31;
+  padding: 0.45rem;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.audio-picker-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.audio-cell {
+  min-height: 52px;
+  padding: 0.35rem;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg2);
+  color: var(--text);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.audio-cell.on {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.audio-cell:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.audio-picker-error {
+  margin-top: 0.35rem;
+  color: var(--warn, #ff5c5c);
+  font-size: 0.72rem;
+  white-space: normal;
+}
+
 .sheet-backdrop {
   position: absolute;
   inset: 0;
@@ -732,6 +795,18 @@ button {
   margin-top: 1rem;
 }
 
+.companion-server {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
 .error {
   color: #ffb4b4;
   font-size: 0.85rem;
@@ -791,8 +866,36 @@ button {
     --hour-w: 200px;
   }
 
+  .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
   .brand-mark {
     height: 18px;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  .status-pill {
+    display: none;
+  }
+
+  .topbar {
+    min-width: 0;
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto;
+    gap: 0.35rem;
+  }
+
+  .topbar-actions .btn {
+    padding: 0 0.6rem;
   }
 
   .device-cec {

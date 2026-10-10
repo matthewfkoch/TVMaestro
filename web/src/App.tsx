@@ -191,7 +191,7 @@ export default function App() {
         </div>
         <div className="topbar-actions">
           {status && (
-            <span className={`pill${status.last_error ? " warn" : ""}`}>
+            <span className={`pill status-pill${status.last_error ? " warn" : ""}`}>
               {status.channels} ch · {status.programmes.toLocaleString()} airings
               {status.last_error ? " · sync error" : ""}
             </span>
@@ -306,6 +306,12 @@ export default function App() {
             .then(reload)
             .catch((e: Error) => setLoadError(e.message))
         }
+        onRefreshAudio={(id) => api.refreshSessionAudio(id)}
+        onSetAudio={async (id, index) => {
+          const session = await api.setSessionAudio(id, index);
+          await reload();
+          return session;
+        }}
         onLaunch={async (id) => {
           await api.launch(id);
           await reload();

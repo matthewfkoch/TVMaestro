@@ -171,6 +171,12 @@ export const api = {
   }) => req<Session>("/api/sessions", { method: "POST", body: JSON.stringify(body) }),
   stopSession: (id: string) =>
     req<Session>(`/api/sessions/${id}/stop`, { method: "POST", body: "{}" }),
+  refreshSessionAudio: (id: string) => req<Session>(`/api/sessions/${id}/audio`),
+  setSessionAudio: (id: string, index: number) =>
+    req<Session>(`/api/sessions/${id}/audio`, {
+      method: "POST",
+      body: JSON.stringify({ index }),
+    }),
   config: () => req<AppConfig>("/api/config"),
   saveConfig: (body: Partial<AppConfig>) =>
     req<AppConfig>("/api/config", { method: "PUT", body: JSON.stringify(body) }),
