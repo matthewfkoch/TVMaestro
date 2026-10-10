@@ -1,15 +1,9 @@
-# Docs index
+## Documentation
 
-This repository includes the following primary documentation files:
-
-- [README.md](../README.md) — project overview, architecture, and quick start
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — contribution flow and local dev setup
-- [SECURITY.md](../SECURITY.md) — vulnerability disclosure and reporting
-- [docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md) — common issues and fixes
-- [docs/RELEASE_PROCESS.md](RELEASE_PROCESS.md) — release and tagging workflow
-- [docs/DEVELOPER_QUICKSTART.md](DEVELOPER_QUICKSTART.md) — local development setup
-
-For platform-specific guidance, see:
-
-- [android/README.md](../android/README.md)
-- [appletv/README.md](../appletv/README.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md) — contribution flow and local development setup
+- [SECURITY.md](SECURITY.md) — security reporting and vulnerability disclosure
+- [docs/README.md](docs/README.md) — documentation index
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — common setup and runtime issues
+- [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) — release workflow and versioning
+- [docs/DEVELOPER_QUICKSTART.md](docs/DEVELOPER_QUICKSTART.md) — local contributor quickstart
+- [docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md) — recommended branch protection settings
