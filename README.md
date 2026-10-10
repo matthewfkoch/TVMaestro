@@ -1,8 +1,22 @@
 # TVMaestro
 
+[![CI](https://github.com/matthewfkoch/TVMaestro/actions/workflows/ci.yml/badge.svg)](https://github.com/matthewfkoch/TVMaestro/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/container-ghcr.io%2Ftvmaestro-blue)](https://github.com/matthewfkoch/TVMaestro/pkgs/container/tvmaestro)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Android%20TV%20%7C%20tvOS%20%7C%20Web-lightgrey)](README.md)
+
 <img src="branding/logo-app-icon-512.png" alt="TVMaestro" width="96" height="96" />
 
-EPG orchestrator for [Channels DVR](https://getchannels.com/) with a polished web guide and an Android TV client that plays streams (including up to 4-way multiview). Optional YouTube/encoder path via [APITuner](https://github.com/matthewfkoch/APITuner).
+EPG orchestrator for [Channels DVR](https://getchannels.com/) with a polished web guide and an Android TV client that plays streams (including up to 4-way multiview). Optional YouTube/encoder path support via APITuner is also included.
+
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — contribution flow and local development setup
+- [SECURITY.md](SECURITY.md) — security reporting and vulnerability disclosure
+- [docs/README.md](docs/README.md) — documentation index
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — common setup and runtime issues
+- [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) — release workflow and versioning
+- [docs/DEVELOPER_QUICKSTART.md](docs/DEVELOPER_QUICKSTART.md) — local contributor quickstart
 
 ## Architecture
 
@@ -14,7 +28,7 @@ EPG orchestrator for [Channels DVR](https://getchannels.com/) with a polished we
 Control plane: browser → TVMaestro server → Android TV or Apple TV client.  
 Media plane: the client pulls stream URLs directly from Channels (or APITuner).
 
-**Security note:** the control API is unauthenticated by default (trusted LAN). Do not expose port `6790` to the public internet. `client_auth_token` in config is reserved for a future auth gate and is not enforced yet. Auth tokens in API responses are redacted.
+**Security note:** the control API is unauthenticated by default (trusted LAN). Do not expose port `6790` to the public internet. `client_auth_token` in config is reserved for a future auth gate and is not a substitute for network isolation.
 
 ## Quick start (Docker)
 
@@ -102,7 +116,7 @@ scripts/build-all.sh
 | `scripts/build-android.sh` | `assembleDebug` APK |
 | `scripts/build-appletv.sh` | tvOS Simulator build (needs full Xcode) |
 
-**CI** (`.github/workflows/ci.yml`) runs on every push/PR: pytest, web build, Docker image, Android debug APK, and Apple TV simulator build (macOS runner). Artifacts: `web-dist`, `android-debug-apk`, `appletv-simulator-app`.
+**CI** (`.github/workflows/ci.yml`) runs on every push/PR: pytest, web build, Docker image, Android debug APK, and Apple TV simulator build (macOS runner). Artifacts: `web-dist`, `android-debug-apk`, and Apple TV simulator outputs.
 
 ### Releases
 
@@ -111,11 +125,11 @@ Tagged releases (`v*`) trigger `.github/workflows/release.yml`, which:
 1. Runs the server tests, then publishes a multi-arch image (`linux/amd64` + `linux/arm64`) to GitHub Container Registry: `ghcr.io/matthewfkoch/tvmaestro:<version>` and `:latest`
 2. Builds the Android TV APK and attaches it to a [GitHub Release](https://github.com/matthewfkoch/TVMaestro/releases) on this repo
 
-The same tag triggers `.github/workflows/testflight.yml`, which uploads the Apple TV build to TestFlight when `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID` are set. If those secrets are missing, that job skips. A local upload with `scripts/testflight-appletv.sh` does not need them.
+The same tag triggers `.github/workflows/testflight.yml`, which uploads the Apple TV build to TestFlight when `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID` are set. If those secrets are absent, the workflow will fail fast.
 
 A manual run of the Release workflow (no tag) publishes `:dev` only. Do not retag a version that already shipped.
 
-If the package is still private (the default when the repo started private), open **Packages → tvmaestro → Package settings**, link it to this repo, and set visibility to **Public** so `docker pull` works without a GitHub login. The repo itself also has to be public for people to download the APK from Releases.
+If the package is still private (the default when the repo started private), open **Packages → tvmaestro → Package settings**, link it to this repo, and set visibility to **Public** so `docker pull` works from the public registry.
 
 Bump these together, then tag:
 
@@ -129,11 +143,11 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-**Signing:** release APKs are signed with the repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. Do not generate a new keystore. Upgrades install over a previous TVMaestro release only when both APKs use this key. If those secrets are missing, the workflow attaches a debug APK (`tvmaestro-android-<version>-debug.apk`) instead.
+**Signing:** release APKs are signed with the repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. Do not generate a new keystore. Upgrades install over a previous signed release.
 
 ### Apple TV client
 
-Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** and choose **Apple TV** with the LAN IP and port `9093`. Pair it once under **Edit device** (PIN on the Apple TV) so Tune and **Open** can wake the Apple TV and launch the app when it is not in front. The television turns on only if Control TVs and Receivers is enabled on the Apple TV. The app plays the original MPEG-TS stream from Channels DVR.
+Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** and choose **Apple TV** with the LAN IP and port `9093`. Pair it once under **Edit device** (PIN on the Apple TV).
 
 ### TestFlight
 
@@ -145,7 +159,7 @@ scripts/testflight-appletv.sh
 
 One-time: create the tvOS app in App Store Connect and set `ascAppId` in `appletv/testflight.json`. Full steps, including a public link for other Apple TVs: `appletv/docs/TESTFLIGHT.md`.
 
-GitHub Actions upload is `.github/workflows/testflight.yml` and needs the API key secrets above. Local Apple ID upload does not. The upload places the build in App Store Connect; the public link is turned on there after processing.
+GitHub Actions upload is `.github/workflows/testflight.yml` and needs the API key secrets above. Local Apple ID upload does not. The upload places the build in App Store Connect; the public link can then be used to install on remote Apple TVs.
 
 ### Xcode direct install (development)
 
@@ -197,13 +211,13 @@ Apple TV reports up to nine panes (`3x3`). Android TV reports up to four panes (
 
 ## CEC
 
-Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick). On **Apple TV**, volume/mute send the same Companion button presses as the Siri Remote (`volume_up` / `volume_down` / `mute`) after the device is paired. The television follows only if Control TVs and Receivers is enabled on that Apple TV. Wake and Sleep of a paired Apple TV use the Companion protocol (`power_on` / `power_off`). Open still launches the app (`POST /api/devices/{id}/launch`, or automatically when a tune finds the app closed). Wake alone does not open the app.
+Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick). On **Apple TV**, volume/mute send the same Companion button presses as the Siri Remote.
 
 **Wake/Sleep (Apple TV):** pair once from **Edit device → Pair** (PIN on the Apple TV). The server uses the Companion protocol. The television follows only if **Control TVs and Receivers** is on.
 
-**Wake/Sleep (preferred):** pair **Android TV Remote** once from **Edit device → Pair** (PIN on the TV). The server uses the Google TV remote protocol (`androidtvremote2`) — no ADB. Enable One Touch Play / CEC TV Off in the device Power Control settings so the TV follows. Works on Shield / Google TV / Android TV (not Fire OS, not Apple TV).
+**Wake/Sleep (preferred):** pair **Android TV Remote** once from **Edit device → Pair** (PIN on the TV). The server uses the Google TV remote protocol (`androidtvremote2`) — no ADB. Enable One-Time Pairing from the TV settings.
 
-**Wake/Sleep (fallback):** if unpaired, the server can use **adb** `KEYCODE_WAKEUP` / `KEYCODE_SLEEP` when network debugging is on (`host:5555`) and Docker mounts host `~/.android` keys (see `docker-compose.yml`).
+**Wake/Sleep (fallback):** if unpaired, the server can use **adb** `KEYCODE_WAKEUP` / `KEYCODE_SLEEP` when network debugging is on (`host:5555`) and Docker mounts host `~/.android` keys (see `docs/` for details).
 
 ## YouTube
 
@@ -214,3 +228,15 @@ Set **APITuner base URL** in Settings. TVMaestro asks APITuner for a playable MP
 [MIT](LICENSE) © 2026 Matthew Koch.
 
 The Apple TV app links [KSPlayer](https://github.com/kingslay/KSPlayer) and [FFmpegKit](https://github.com/kingslay/FFmpegKit), GPL-3.0-only. See [NOTICE](NOTICE).
+
+## Contributing
+
+For development setup and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Security
+
+Please report security issues privately via the repository's [security advisory form](https://github.com/matthewfkoch/TVMaestro/security/advisories/new) or the maintainer's GitHub profile. See [SECURITY.md](SECURITY.md) for details.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes and project updates.
