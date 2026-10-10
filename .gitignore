@@ -28,6 +28,7 @@ android/app/build/
 android/build/
 android/.cxx/
 appletv/build/
+appletv/build-device/
 appletv/vendor/bundle/
 appletv/.bundle/
 appletv/fastlane/report.xml
@@ -39,6 +40,13 @@ appletv/fastlane/metadata/review_information/phone_number.txt
 appletv/fastlane/metadata/review_information/email_address.txt
 appletv/*.ipa
 appletv/*.dSYM.zip
+*.ipa
+*.dSYM.zip
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+**/fastlane/report.xml
 appletv/TVMaestro.xcodeproj/project.xcworkspace/
 appletv/TVMaestro.xcodeproj/xcuserdata/
 *.iml

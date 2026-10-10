@@ -1,0 +1,15 @@
+{
+  "appId": "com.tvmaestro.companion",
+  "appName": "TVMaestro",
+  "webDir": "www",
+  "backgroundColor": "#0e1218",
+  "appendUserAgent": "TVMaestroCompanion",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0e1218"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#0e1218"
+  }
+}

@@ -1,0 +1,149 @@
+require "json"
+
+default_platform(:ios)
+
+def testflight_config
+  path = File.expand_path("../testflight.json", __dir__)
+  JSON.parse(File.read(path))
+rescue Errno::ENOENT, JSON::ParserError
+  {}
+end
+
+platform :ios do
+  desc "Register the iOS bundle ID and App Store Connect app"
+  lane :setup do
+    cfg = testflight_config
+    creds = upload_credentials_hash
+    UI.user_error!("The App Store Connect API key is required to register the iOS app") unless creds[:api_key]
+    Spaceship::ConnectAPI.token ||= Spaceship::ConnectAPI::Token.create(**creds[:api_key])
+
+    bundle_id = cfg["bundleId"] || "com.tvmaestro.companion"
+    name = cfg["appName"] || "TVMaestro"
+    sku = cfg["sku"] || "tvmaestro-ios"
+
+    if Spaceship::ConnectAPI::BundleId.find(bundle_id)
+      UI.success("Bundle ID #{bundle_id} already exists")
+    else
+      Spaceship::ConnectAPI::BundleId.create(name: name, platform: "IOS", identifier: bundle_id)
+      UI.success("Registered bundle ID #{bundle_id}")
+    end
+
+    app = Spaceship::ConnectAPI::App.find(bundle_id)
+    if app
+      UI.success("App Store Connect app already exists (#{app.id})")
+    else
+      begin
+        Spaceship::ConnectAPI::App.create(
+          name: name,
+          version_string: "0.4.0",
+          sku: sku,
+          primary_locale: "en-US",
+          bundle_id: bundle_id,
+          platforms: ["IOS"]
+        )
+      rescue StandardError => e
+        if e.message.include?("does not allow 'CREATE'")
+          UI.user_error!(
+            "The API key can upload builds but cannot create a new app. In App Store Connect, choose Apps → New App → iOS, name #{name}, bundle ID #{bundle_id}, SKU #{sku}. Then run scripts/testflight-ios.sh again."
+          )
+        end
+        raise
+      end
+      app = Spaceship::ConnectAPI::App.find(bundle_id)
+      UI.success("Created App Store Connect app (#{app&.id})")
+    end
+  end
+
+  desc "Build Release and upload to TestFlight"
+  lane :beta do
+    cfg = testflight_config
+    team_id = resolve_team_id
+    project = "ios/App/App.xcodeproj"
+
+    setup
+
+    current_build = get_build_number(xcodeproj: project).to_i
+    run_number = ENV["GITHUB_RUN_NUMBER"].to_i
+    next_build = [current_build + 1, run_number].max
+    increment_build_number(
+      build_number: next_build.to_s,
+      xcodeproj: project
+    )
+
+    bundle_id = cfg["bundleId"] || "com.tvmaestro.companion"
+    api_key = upload_credentials_hash[:api_key]
+    cert(api_key: api_key, team_id: team_id, development: false)
+    sigh(api_key: api_key, app_identifier: bundle_id, team_id: team_id, platform: "ios")
+    profile_name = lane_context[SharedValues::SIGH_NAME]
+    profile_uuid = lane_context[SharedValues::SIGH_UUID]
+
+    build_app(
+      project: project,
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store",
+      destination: "generic/platform=iOS",
+      derived_data_path: "/tmp/tvmaestro-companion-derived",
+      xcargs: "#{signing_xcargs(team_id)} CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE=#{profile_uuid}",
+      export_options: {
+        method: "app-store",
+        signingStyle: "manual",
+        teamID: team_id,
+        uploadSymbols: true,
+        provisioningProfiles: {
+          bundle_id => profile_name
+        }
+      }
+    )
+
+    upload_args = upload_credentials_hash.merge(
+      app_identifier: cfg["bundleId"] || "com.tvmaestro.companion",
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false,
+      uses_non_exempt_encryption: false
+    )
+    asc = cfg["ascAppId"].to_s
+    upload_args[:apple_id] = asc if !asc.empty? && !asc.include?("REPLACE")
+
+    upload_to_testflight(**upload_args)
+  end
+
+  def signing_xcargs(team_id)
+    args = ["-allowProvisioningUpdates", "DEVELOPMENT_TEAM=#{team_id}"]
+    if ENV["GITHUB_ACTIONS"] == "true"
+      key_path = ENV["ASC_API_KEY_PATH"]
+      key_id = ENV["ASC_KEY_ID"]
+      issuer_id = ENV["ASC_ISSUER_ID"]
+      if key_path && !key_path.empty? && key_id && !key_id.empty? && issuer_id && !issuer_id.empty?
+        args << "-authenticationKeyPath #{key_path}"
+        args << "-authenticationKeyID #{key_id}"
+        args << "-authenticationKeyIssuerID #{issuer_id}"
+      end
+    end
+    args.join(" ")
+  end
+
+  def resolve_team_id
+    team = ENV["APPLE_TEAM_ID"].to_s
+    UI.user_error!("Set APPLE_TEAM_ID") if team.empty?
+    team
+  end
+
+  def upload_credentials_hash
+    if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_API_KEY_PATH"]
+      key = app_store_connect_api_key(
+        key_id: ENV["ASC_KEY_ID"],
+        issuer_id: ENV["ASC_ISSUER_ID"],
+        key_filepath: ENV["ASC_API_KEY_PATH"],
+        duration: 1200,
+        in_house: false
+      )
+      { api_key: key }
+    elsif ENV["FASTLANE_USER"]
+      { username: ENV["FASTLANE_USER"] }
+    else
+      UI.user_error!("Set FASTLANE_USER or the ASC API key env vars")
+    end
+  end
+end
