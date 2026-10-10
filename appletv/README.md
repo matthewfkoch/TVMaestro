@@ -78,7 +78,7 @@ The app plays the original MPEG-TS stream, including MPEG-2, with KSPlayer softw
 
 ## Version
 
-0.4.0
+0.4.1
 
 ## License
 
