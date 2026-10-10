@@ -276,7 +276,7 @@ jobs:
           echo "image=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')/tvmaestro" >> "$GITHUB_OUTPUT"
 
       - name: Download APK
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: android-apk
           path: release-assets
