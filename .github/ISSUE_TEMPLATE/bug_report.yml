@@ -1,0 +1,71 @@
+name: Bug report
+about: Report a problem with the server, web UI, Android client, or Apple TV client
+title: ""
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please provide as much detail as you can.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+      placeholder: Describe the issue clearly and concisely.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Steps to reproduce the issue
+      placeholder: |
+        1. Start the server
+        2. Open the web UI
+        3. Attempt to tune a channel
+        4. Observe error
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Relevant platform and environment details
+      placeholder: |
+        - OS:
+        - Browser:
+        - Android TV / Apple TV model:
+        - TVMaestro version or commit:
+        - Channels DVR version:
+        - Docker or local dev environment:
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste relevant logs or provide screenshots
+      placeholder: Paste console output, server logs, or screenshots here.
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What did you expect to happen?
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: What actually happened?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Anything else we should know?
