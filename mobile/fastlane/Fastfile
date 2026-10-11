@@ -75,6 +75,9 @@ platform :ios do
       increment_version_number(version_number: version, xcodeproj: project) if version.match?(/^\d+\.\d+\.\d+/)
     end
 
+    # Archive without a signature. Automatic signing would create an iOS
+    # development profile here, and that fails when the team has no devices.
+    # The App Store export below signs with the API key and does not need one.
     build_app(
       project: project,
       scheme: "App",
@@ -82,6 +85,7 @@ platform :ios do
       export_method: "app-store",
       destination: "generic/platform=iOS",
       derived_data_path: "/tmp/tvmaestro-companion-derived",
+      skip_codesigning: true,
       xcargs: signing_xcargs(team_id),
       export_options: {
         method: "app-store",
