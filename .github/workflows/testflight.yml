@@ -76,6 +76,7 @@ jobs:
   companion:
     name: Companion TestFlight
     runs-on: macos-15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -147,6 +148,7 @@ jobs:
 
       - name: Upload companion to TestFlight
         if: steps.asc.outputs.enabled == 'true'
+        timeout-minutes: 40
         working-directory: mobile
         env:
           BUNDLE_GEMFILE: ${{ github.workspace }}/appletv/Gemfile
@@ -155,4 +157,6 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_HIDE_CHANGELOG: "1"
         run: bundle exec fastlane ios beta

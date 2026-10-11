@@ -60,6 +60,10 @@ platform :ios do
     team_id = resolve_team_id
     project = "ios/App/App.xcodeproj"
 
+    # cert imports a private key. On a headless runner the login keychain
+    # waits for a dialog that never appears, so the step sits with no log.
+    setup_ci if ENV["CI"]
+
     setup
 
     current_build = get_build_number(xcodeproj: project).to_i
