@@ -261,9 +261,112 @@ jobs:
           path: ${{ steps.apk.outputs.name }}
           if-no-files-found: error
 
+  companion-android:
+    name: Companion APK
+    needs: [test]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Set up Android SDK
+        run: |
+          ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=${ANDROID_HOME}" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=${ANDROID_HOME}" >> "$GITHUB_ENV"
+          echo "${ANDROID_HOME}/platform-tools" >> "$GITHUB_PATH"
+
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [[ ! -x "$SDKMANAGER" ]]; then
+            SDKMANAGER="$(find "${ANDROID_HOME}/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort -V | tail -1)"
+          fi
+          if [[ -z "$SDKMANAGER" || ! -x "$SDKMANAGER" ]]; then
+            echo "::error::sdkmanager not found under ${ANDROID_HOME}"
+            exit 1
+          fi
+
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0"
+          test -d "${ANDROID_HOME}/platforms/android-36"
+
+      - name: Sync web assets
+        working-directory: mobile
+        run: |
+          npm ci
+          npx cap sync android
+
+      - name: Prepare release keystore
+        id: signing
+        working-directory: mobile/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [[ -n "$KEYSTORE_BASE64" && -n "$KEYSTORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+            if [[ ! -f keystore.jks ]]; then
+              echo "::error::Failed to write keystore.jks"
+              exit 1
+            fi
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Release signing enabled"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "No release keystore secrets; building debug APK"
+          fi
+
+      - name: Build release APK
+        if: steps.signing.outputs.enabled == 'true'
+        working-directory: mobile/android
+        env:
+          KEYSTORE_FILE: keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon assembleRelease
+
+      - name: Build debug APK
+        if: steps.signing.outputs.enabled != 'true'
+        working-directory: mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Stage APK
+        id: apk
+        working-directory: mobile/android
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          if [[ -f app/build/outputs/apk/release/app-release.apk ]]; then
+            name="tvmaestro-companion-${ver}.apk"
+            cp app/build/outputs/apk/release/app-release.apk "${GITHUB_WORKSPACE}/${name}"
+          else
+            name="tvmaestro-companion-${ver}-debug.apk"
+            cp app/build/outputs/apk/debug/app-debug.apk "${GITHUB_WORKSPACE}/${name}"
+          fi
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: companion-apk
+          path: ${{ steps.apk.outputs.name }}
+          if-no-files-found: error
+
   github-release:
     name: Publish GitHub Release
-    needs: [publish-docker, android]
+    needs: [publish-docker, android, companion-android]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
@@ -275,22 +378,27 @@ jobs:
           echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           echo "image=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')/tvmaestro" >> "$GITHUB_OUTPUT"
 
-      - name: Download APK
+      - name: Download APKs
         uses: actions/download-artifact@v4
         with:
-          name: android-apk
+          pattern: "*-apk"
           path: release-assets
+          merge-multiple: true
 
-      - name: Describe APK
+      - name: Describe APKs
         id: apk
         run: |
-          apk="$(find release-assets -name '*.apk' -type f | head -1)"
-          if [[ -z "$apk" ]]; then
-            echo "::error::No APK found to attach"
+          tv="$(find release-assets -name 'tvmaestro-android-*.apk' -type f | head -1)"
+          companion="$(find release-assets -name 'tvmaestro-companion-*.apk' -type f | head -1)"
+          if [[ -z "$tv" || -z "$companion" ]]; then
+            echo "::error::Expected Android TV and companion APKs"
+            find release-assets -type f
             exit 1
           fi
-          echo "file=$(basename "$apk")" >> "$GITHUB_OUTPUT"
-          echo "sha256=$(sha256sum "$apk" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "tv_file=$(basename "$tv")" >> "$GITHUB_OUTPUT"
+          echo "tv_sha256=$(sha256sum "$tv" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "companion_file=$(basename "$companion")" >> "$GITHUB_OUTPUT"
+          echo "companion_sha256=$(sha256sum "$companion" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -317,13 +425,23 @@ jobs:
 
             ## Android TV
 
-            Sideload `${{ steps.apk.outputs.file }}` from this release:
+            Sideload `${{ steps.apk.outputs.tv_file }}` from this release:
 
             ```bash
-            adb install -r ${{ steps.apk.outputs.file }}
+            adb install -r ${{ steps.apk.outputs.tv_file }}
             ```
 
-            SHA-256: `${{ steps.apk.outputs.sha256 }}`
+            SHA-256: `${{ steps.apk.outputs.tv_sha256 }}`
+
+            ## Companion
+
+            Phone and tablet app. iOS is on TestFlight. Sideload the Android APK `${{ steps.apk.outputs.companion_file }}`:
+
+            ```bash
+            adb install -r ${{ steps.apk.outputs.companion_file }}
+            ```
+
+            SHA-256: `${{ steps.apk.outputs.companion_sha256 }}`
 
             ## Apple TV
 

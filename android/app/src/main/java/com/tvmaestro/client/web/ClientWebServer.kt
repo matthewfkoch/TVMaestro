@@ -52,6 +52,7 @@ class ClientWebServer(
                 }
                 uri == "/api/session" && method == Method.POST -> setSession(session)
                 uri == "/api/session/audio" && method == Method.POST -> setAudio(session)
+                uri == "/api/session/slot" && method == Method.POST -> setSlot(session)
                 uri == "/api/session/stop" && method == Method.POST -> {
                     GuideReach.mark()
                     stopSession()
@@ -187,6 +188,54 @@ class ClientWebServer(
         val el = obj.get(key) ?: return null
         if (el.isJsonNull) return null
         return el.asString?.takeIf { it.isNotBlank() }
+    }
+
+    private fun setSlot(session: IHTTPSession): Response {
+        val current = SessionStore.current
+            ?: return json(
+                mapOf("success" to false, "message" to "No session"),
+                Response.Status.BAD_REQUEST,
+            )
+        val jsonBody = body(session)
+        val indexEl = jsonBody.get("index")
+        val index = if (indexEl == null || indexEl.isJsonNull) null else indexEl.asInt
+        val (rows, cols) = layoutDims(current.layout)
+        val capacity = rows * cols
+        val slotEl = jsonBody.get("slot")
+        if (index == null || index !in 0 until capacity || slotEl == null || !slotEl.isJsonObject) {
+            return json(
+                mapOf("success" to false, "message" to "Could not replace that pane"),
+                Response.Status.BAD_REQUEST,
+            )
+        }
+        val slotObj = slotEl.asJsonObject
+        val slots = current.slots.toMutableList()
+        while (slots.size < capacity) slots.add(SessionSlot())
+        slots[index] = SessionSlot(
+            url = jsonString(slotObj, "url"),
+            title = jsonString(slotObj, "title"),
+            audio = slotObj.get("audio")?.takeUnless { it.isJsonNull }?.asBoolean ?: false,
+            channel_id = jsonString(slotObj, "channel_id"),
+        )
+        val audioEl = jsonBody.get("audio_index")
+        val audioIndex = if (audioEl == null || audioEl.isJsonNull) null else audioEl.asInt
+        val updatedSlots = slots.mapIndexed { i, slot ->
+            val audible = if (audioIndex != null) {
+                i == audioIndex && slot.isPlayable()
+            } else {
+                slot.audio && slot.isPlayable()
+            }
+            slot.copy(audio = audible)
+        }
+        if (updatedSlots.none { it.isPlayable() }) {
+            return json(
+                mapOf("success" to false, "message" to "At least one stream must keep playing"),
+                Response.Status.BAD_REQUEST,
+            )
+        }
+        val updated = current.copy(slots = updatedSlots)
+        SessionStore.updateSlot(updated, index)
+        return json(mapOf("success" to true, "session" to updated))
     }
 
     private fun setAudio(session: IHTTPSession): Response {

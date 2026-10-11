@@ -116,16 +116,16 @@ scripts/build-all.sh
 | `scripts/build-android.sh` | `assembleDebug` APK |
 | `scripts/build-appletv.sh` | tvOS Simulator build (needs full Xcode) |
 
-**CI** (`.github/workflows/ci.yml`) runs on every push/PR: pytest, web build, Docker image, Android debug APK, and Apple TV simulator build (macOS runner). Artifacts: `web-dist`, `android-debug-apk`, and Apple TV simulator outputs.
+**CI** (`.github/workflows/ci.yml`) runs on every push/PR: pytest, web build, Docker image, Android TV debug APK, Apple TV build, companion Android debug APK, and companion iOS Simulator build. Artifacts: `web-dist`, `android-debug-apk`, `appletv-app`, `companion-android-debug-apk`, `companion-ios-app`.
 
 ### Releases
 
 Tagged releases (`v*`) trigger `.github/workflows/release.yml`, which:
 
 1. Runs the server tests, then publishes a multi-arch image (`linux/amd64` + `linux/arm64`) to GitHub Container Registry: `ghcr.io/matthewfkoch/tvmaestro:<version>` and `:latest`
-2. Builds the Android TV APK and attaches it to a [GitHub Release](https://github.com/matthewfkoch/TVMaestro/releases) on this repo
+2. Builds the Android TV APK and the companion Android APK, and attaches both to a [GitHub Release](https://github.com/matthewfkoch/TVMaestro/releases) on this repo
 
-The same tag triggers `.github/workflows/testflight.yml`, which uploads the Apple TV build to TestFlight when `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID` are set. If those secrets are absent, the workflow will fail fast.
+The same tag triggers `.github/workflows/testflight.yml`, which uploads the Apple TV app and the iOS companion to TestFlight when `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID` are set. If those secrets are missing, those jobs skip. Local uploads with `scripts/testflight-appletv.sh` and `scripts/testflight-ios.sh` do not need them.
 
 A manual run of the Release workflow (no tag) publishes `:dev` only. Do not retag a version that already shipped.
 
@@ -137,13 +137,14 @@ Bump these together, then tag:
 - `web/package.json`
 - Android `versionName` and `versionCode` in `android/app/build.gradle.kts`
 - Apple TV `MARKETING_VERSION` in `appletv/TVMaestro.xcodeproj` (`Info.plist` reads `$(MARKETING_VERSION)` and `$(CURRENT_PROJECT_VERSION)`; Fastlane increments the build number on upload)
+- Companion `version` in `mobile/package.json`, `versionName` and `versionCode` in `mobile/android/app/build.gradle`, and `MARKETING_VERSION` in `mobile/ios/App/App.xcodeproj`
 
 ```bash
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-**Signing:** release APKs are signed with the repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. Do not generate a new keystore. Upgrades install over a previous signed release.
+**Signing:** release APKs are signed with the repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. The same keystore signs the Android TV client and the companion. Do not generate a new keystore. Upgrades install over a previous release only when both APKs use this key. If those secrets are missing, the workflow attaches debug APKs (`tvmaestro-android-<version>-debug.apk` and `tvmaestro-companion-<version>-debug.apk`) instead.
 
 ### Apple TV client
 
@@ -159,7 +160,7 @@ scripts/testflight-appletv.sh
 
 One-time: create the tvOS app in App Store Connect and set `ascAppId` in `appletv/testflight.json`. Full steps, including a public link for other Apple TVs: `appletv/docs/TESTFLIGHT.md`.
 
-GitHub Actions upload is `.github/workflows/testflight.yml` and needs the API key secrets above. Local Apple ID upload does not. The upload places the build in App Store Connect; the public link can then be used to install on remote Apple TVs.
+GitHub Actions upload is `.github/workflows/testflight.yml` and needs the API key secrets above. The same workflow uploads the iOS companion. Local Apple ID upload does not. The upload places the build in App Store Connect; the public link is turned on there after processing.
 
 ### Xcode direct install (development)
 
@@ -199,6 +200,8 @@ Multiview max depends on the SoC: capable devices report up to 4 panes; many Aml
 | POST | `/api/devices/{id}/launch` | Open the TVMaestro app on a paired Apple TV |
 | GET/POST | `/api/sessions` | List / start single or multiview |
 | POST | `/api/sessions/{id}/stop` | Stop playback |
+| GET/POST | `/api/sessions/{id}/audio` | Read or move audio focus (`index`) without restarting streams |
+| POST | `/api/sessions/{id}/slot` | Replace one live pane (`index`, `channel_id`, or null to clear) |
 | POST | `/api/youtube/resolve` | Resolve YouTube URL via APITuner → MPEG-TS slot |
 | GET | `/api/apituner/status` | APITuner reachability |
 | GET | `/docs` | OpenAPI |
@@ -211,13 +214,13 @@ Apple TV reports up to nine panes (`3x3`). Android TV reports up to four panes (
 
 ## CEC
 
-Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick). On **Apple TV**, volume/mute send the same Companion button presses as the Siri Remote.
+Volume/mute use the Android client's `AudioManager` (forwards over HDMI-CEC when volume control is enabled on the stick). On **Apple TV**, volume/mute send the same Companion button presses as the Siri Remote (`volume_up` / `volume_down` / `mute`) after the device is paired. The television follows only if Control TVs and Receivers is enabled on that Apple TV. Wake and Sleep of a paired Apple TV use the Companion protocol (`power_on` / `power_off`). Open still launches the app (`POST /api/devices/{id}/launch`, or automatically when a tune finds the app closed). Wake alone does not open the app.
 
 **Wake/Sleep (Apple TV):** pair once from **Edit device → Pair** (PIN on the Apple TV). The server uses the Companion protocol. The television follows only if **Control TVs and Receivers** is on.
 
-**Wake/Sleep (preferred):** pair **Android TV Remote** once from **Edit device → Pair** (PIN on the TV). The server uses the Google TV remote protocol (`androidtvremote2`) — no ADB. Enable One-Time Pairing from the TV settings.
+**Wake/Sleep (preferred):** pair **Android TV Remote** once from **Edit device → Pair** (PIN on the TV). The server uses the Google TV remote protocol (`androidtvremote2`) — no ADB. Enable One Touch Play / CEC TV Off in the device Power Control settings so the TV follows. Works on Shield / Google TV / Android TV (not Fire OS, not Apple TV).
 
-**Wake/Sleep (fallback):** if unpaired, the server can use **adb** `KEYCODE_WAKEUP` / `KEYCODE_SLEEP` when network debugging is on (`host:5555`) and Docker mounts host `~/.android` keys (see `docs/` for details).
+**Wake/Sleep (fallback):** if unpaired, the server can use **adb** `KEYCODE_WAKEUP` / `KEYCODE_SLEEP` when network debugging is on (`host:5555`) and Docker mounts host `~/.android` keys (see `docker-compose.yml`).
 
 ## YouTube
 

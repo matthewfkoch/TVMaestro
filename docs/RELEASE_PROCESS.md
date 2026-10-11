@@ -16,8 +16,9 @@ Before tagging a release, update all relevant version sources together:
 
 - `server/tvmaestro/__version__.py`
 - `web/package.json`
-- Android metadata in `android/app/build.gradle.kts`
-- Apple TV marketing version in `appletv/TVMaestro.xcodeproj`
+- Android `versionName` and `versionCode` in `android/app/build.gradle.kts`
+- Apple TV `MARKETING_VERSION` in `appletv/TVMaestro.xcodeproj`
+- Companion `version` in `mobile/package.json`, `versionName` and `versionCode` in `mobile/android/app/build.gradle`, and `MARKETING_VERSION` in `mobile/ios/App/App.xcodeproj`
 
 ## Tagging
 
@@ -32,8 +33,8 @@ The release workflow will build and publish the appropriate artifacts.
 
 The repository includes the following release-related workflows:
 
-- `.github/workflows/release.yml` — publishes Docker image and Android APK
-- `.github/workflows/testflight.yml` — uploads Apple TV build to TestFlight when secrets are configured
+- `.github/workflows/release.yml` — publishes the Docker image, the Android TV APK, and the companion Android APK
+- `.github/workflows/testflight.yml` — uploads the Apple TV app and the iOS companion to TestFlight when secrets are configured
 
 ## Notes
 

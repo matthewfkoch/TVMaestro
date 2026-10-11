@@ -13,7 +13,7 @@ from typing import Any, Optional
 import httpx
 
 from . import androidtv_remote, appletv_remote
-from .models import CecAction, Device, SessionState
+from .models import CecAction, Device, SessionSlot, SessionState
 
 logger = logging.getLogger(__name__)
 
@@ -183,6 +183,35 @@ async def push_session(device: Device, session: SessionState, timeout: float = 1
         if isinstance(data, dict) and data.get("success") is False:
             raise RuntimeError(data.get("message") or "Client rejected session")
         return data
+
+
+async def replace_slot(
+    device: Device,
+    index: int,
+    slot: SessionSlot,
+    audio_index: Optional[int],
+    timeout: float = 8.0,
+) -> dict[str, Any]:
+    """Replace one pane. Clients must not restart the other players."""
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(
+            f"{_base(device)}/api/session/slot",
+            headers=_headers(device),
+            json={
+                "index": index,
+                "audio_index": audio_index,
+                "slot": {
+                    "url": slot.url,
+                    "title": slot.title,
+                    "audio": slot.audio,
+                    "channel_id": slot.channel_id,
+                },
+            },
+        )
+        data = read_json(resp, device)
+        if isinstance(data, dict) and data.get("success") is False:
+            raise RuntimeError(data.get("message") or "Client rejected slot change")
+        return data if isinstance(data, dict) else {"success": True}
 
 
 async def set_audio(device: Device, index: int, timeout: float = 8.0) -> dict[str, Any]:

@@ -70,6 +70,11 @@ platform :ios do
       xcodeproj: project
     )
 
+    if ENV["GITHUB_REF_NAME"]&.start_with?("v")
+      version = ENV["GITHUB_REF_NAME"].delete_prefix("v")
+      increment_version_number(version_number: version, xcodeproj: project) if version.match?(/^\d+\.\d+\.\d+/)
+    end
+
     bundle_id = cfg["bundleId"] || "com.tvmaestro.companion"
     api_key = upload_credentials_hash[:api_key]
     cert(api_key: api_key, team_id: team_id, development: false)

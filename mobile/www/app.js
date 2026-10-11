@@ -27,8 +27,18 @@ function plugins() {
   return { Companion };
 }
 
+function cleanAddress(value) {
+  // The iOS URL keyboard inserts invisible direction marks. new URL() rejects those.
+  return String(value || "")
+    .replace(/[\u0000-\u001F\u007F\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uFFFC\uFFFD]/g, "")
+    .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+    .replace(/[\u3002\uFF61\uFE52\u2024]/g, ".")
+    .trim();
+}
+
 function parseServer(rawHost, rawPort) {
-  let input = String(rawHost || "").trim();
+  let input = cleanAddress(rawHost);
+  const typedPort = cleanAddress(rawPort);
   if (!input) {
     throw new Error("Enter the server address.");
   }
@@ -49,7 +59,7 @@ function parseServer(rawHost, rawPort) {
   }
   let port = url.port;
   if (!port) {
-    port = String(rawPort || "").trim() || DEFAULT_PORT;
+    port = typedPort || DEFAULT_PORT;
   }
   if (!/^\d+$/.test(port) || Number(port) < 1 || Number(port) > 65535) {
     throw new Error("Port must be between 1 and 65535.");

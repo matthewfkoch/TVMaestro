@@ -5,47 +5,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/mobile"
 
-export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
-# Capacitor 8 compiles Android sources as Java 21.
-if [[ -z "${JAVA_HOME:-}" ]]; then
-  for candidate in \
-    /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
-    /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
-  do
-    if [[ -x "$candidate/bin/java" ]]; then
-      export JAVA_HOME="$candidate"
-      break
-    fi
-  done
-fi
-if [[ -z "${JAVA_HOME:-}" || "$("$JAVA_HOME/bin/java" -version 2>&1)" != *"21."* ]]; then
-  if ! /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java -version >/dev/null 2>&1; then
-    NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install openjdk@21
-  fi
-  export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
-fi
-export PATH="$JAVA_HOME/bin:$PATH"
-
-SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/opt/homebrew/share/android-commandlinetools}}"
-export ANDROID_HOME="$SDK_DIR"
-export ANDROID_SDK_ROOT="$SDK_DIR"
-if [[ ! -f android/local.properties ]]; then
-  printf 'sdk.dir=%s\n' "$SDK_DIR" > android/local.properties
-fi
-
 PREPARE_IOS_ONLY=0
 if [[ "${1:-}" == "--prepare-ios-only" ]]; then
   PREPARE_IOS_ONLY=1
-fi
-
-if [[ "$PREPARE_IOS_ONLY" == "0" ]]; then
-npm install
-npx cap sync
-
-echo "Building Android debug APK"
-(cd android && ./gradlew --no-daemon assembleDebug)
-APK="$ROOT/mobile/android/app/build/outputs/apk/debug/app-debug.apk"
-echo "Android APK: $APK"
 fi
 
 prepare_ios_capacitor() {
@@ -111,6 +73,42 @@ if [[ "$PREPARE_IOS_ONLY" == "1" ]]; then
   prepare_ios_capacitor
   exit 0
 fi
+
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+# Capacitor 8 compiles Android sources as Java 21.
+if [[ -z "${JAVA_HOME:-}" ]]; then
+  for candidate in \
+    /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+    /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+  do
+    if [[ -x "$candidate/bin/java" ]]; then
+      export JAVA_HOME="$candidate"
+      break
+    fi
+  done
+fi
+if [[ -z "${JAVA_HOME:-}" || "$("$JAVA_HOME/bin/java" -version 2>&1)" != *"21."* ]]; then
+  if ! /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java -version >/dev/null 2>&1; then
+    NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install openjdk@21
+  fi
+  export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+fi
+export PATH="$JAVA_HOME/bin:$PATH"
+
+SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/opt/homebrew/share/android-commandlinetools}}"
+export ANDROID_HOME="$SDK_DIR"
+export ANDROID_SDK_ROOT="$SDK_DIR"
+if [[ ! -f android/local.properties ]]; then
+  printf 'sdk.dir=%s\n' "$SDK_DIR" > android/local.properties
+fi
+
+npm install
+npx cap sync
+
+echo "Building Android debug APK"
+(cd android && ./gradlew --no-daemon assembleDebug)
+APK="$ROOT/mobile/android/app/build/outputs/apk/debug/app-debug.apk"
+echo "Android APK: $APK"
 
 if [[ -x "$DEVELOPER_DIR/usr/bin/xcodebuild" ]]; then
   echo "Preparing iOS Capacitor frameworks"

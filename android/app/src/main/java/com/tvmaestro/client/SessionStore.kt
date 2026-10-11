@@ -9,6 +9,7 @@ object SessionStore {
 
     private val listeners = CopyOnWriteArrayList<(PlaybackSession?) -> Unit>()
     private val audioListeners = CopyOnWriteArrayList<(PlaybackSession) -> Unit>()
+    private val slotListeners = CopyOnWriteArrayList<(PlaybackSession, Int) -> Unit>()
 
     fun set(session: PlaybackSession?) {
         current = session
@@ -19,6 +20,12 @@ object SessionStore {
     fun updateAudio(session: PlaybackSession) {
         current = session
         audioListeners.forEach { it(session) }
+    }
+
+    /** Replace one pane without notifying a full session rebuild. */
+    fun updateSlot(session: PlaybackSession, index: Int) {
+        current = session
+        slotListeners.forEach { it(session, index) }
     }
 
     fun addListener(listener: (PlaybackSession?) -> Unit) {
@@ -35,5 +42,13 @@ object SessionStore {
 
     fun removeAudioListener(listener: (PlaybackSession) -> Unit) {
         audioListeners.remove(listener)
+    }
+
+    fun addSlotListener(listener: (PlaybackSession, Int) -> Unit) {
+        slotListeners.add(listener)
+    }
+
+    fun removeSlotListener(listener: (PlaybackSession, Int) -> Unit) {
+        slotListeners.remove(listener)
     }
 }

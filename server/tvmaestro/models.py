@@ -123,6 +123,11 @@ class AudioFocusRequest(BaseModel):
     index: int
 
 
+class SlotReplaceRequest(BaseModel):
+    index: int
+    channel_id: Optional[str] = None
+
+
 class SessionState(BaseModel):
     id: str
     device_id: str

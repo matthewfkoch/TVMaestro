@@ -40,11 +40,13 @@ class PlayerActivity : AppCompatActivity() {
     private val views = mutableListOf<PlayerView>()
     private val playerBySlot = mutableMapOf<Int, ExoPlayer>()
     private val strokeBySlot = mutableMapOf<Int, View>()
+    private val startRunnables = mutableMapOf<Int, Runnable>()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val tag = "PlayerActivity"
     private var hideChrome: Runnable? = null
     private var applyingSession = false
     private var pendingAudio: PlaybackSession? = null
+    private var pendingSlot: Pair<PlaybackSession, Int>? = null
 
     private val sessionListener: (PlaybackSession?) -> Unit = { session ->
         runOnUiThread { applySession(session) }
@@ -56,6 +58,10 @@ class PlayerActivity : AppCompatActivity() {
 
     private val audioListener: (PlaybackSession) -> Unit = { session ->
         runOnUiThread { applyAudio(session) }
+    }
+
+    private val slotListener: (PlaybackSession, Int) -> Unit = { session, index ->
+        runOnUiThread { applySlot(session, index) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,6 +84,7 @@ class PlayerActivity : AppCompatActivity() {
         startControlService()
         SessionStore.addListener(sessionListener)
         SessionStore.addAudioListener(audioListener)
+        SessionStore.addSlotListener(slotListener)
         GuideReach.addListener(guideListener)
         applySession(SessionStore.current)
         refreshIdle()
@@ -91,6 +98,7 @@ class PlayerActivity : AppCompatActivity() {
     override fun onDestroy() {
         SessionStore.removeListener(sessionListener)
         SessionStore.removeAudioListener(audioListener)
+        SessionStore.removeSlotListener(slotListener)
         GuideReach.removeListener(guideListener)
         hideChrome?.let { mainHandler.removeCallbacks(it) }
         mainHandler.removeCallbacksAndMessages(null)
@@ -202,6 +210,9 @@ class PlayerActivity : AppCompatActivity() {
             val pending = pendingAudio
             pendingAudio = null
             if (pending != null) applyAudio(pending)
+            val slotChange = pendingSlot
+            pendingSlot = null
+            if (slotChange != null) applySlot(slotChange.first, slotChange.second)
         }
     }
 
@@ -255,47 +266,129 @@ class PlayerActivity : AppCompatActivity() {
                 grid.addView(cell)
                 return@forEachIndexed
             }
-            val url = if (multi && index != hwIndex) lightenStreamUrl(rawUrl) else rawUrl
-            val view =
-                PlayerView(this).apply {
-                    useController = false
-                    layoutParams = FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                    )
-                }
-            val preferSoftware = multi && index != hwIndex
-            val player = buildPlayer(preferSoftware)
-            player.volume = if (slot.audio) 1f else 0f
-            playerBySlot[index] = player
-            val errorLabel = paneErrorLabel()
-            player.addListener(
-                object : Player.Listener {
-                    override fun onPlayerError(error: PlaybackException) {
-                        Log.e(tag, "pane $index error: ${error.message}", error)
-                        errorLabel.visibility = View.VISIBLE
-                        chromeMessage.text = "Pane ${index + 1}: ${error.message ?: getString(R.string.pane_failed)}"
-                        chromeMessage.visibility = View.VISIBLE
-                        showChrome(focusSettings = false)
-                    }
-                },
-            )
-            view.player = player
-            cell.addView(view)
-            cell.addView(errorLabel)
-            if (multi) strokeBySlot[index] = addStroke(cell, audio = slot.audio)
             grid.addView(cell)
-            views.add(view)
-            players.add(player)
-
             val delayMs = if (multi) index * 350L else 0L
-            mainHandler.postDelayed({
-                if (players.contains(player)) {
-                    player.setMediaItem(MediaItem.fromUri(url))
-                    player.playWhenReady = true
-                    player.prepare()
+            mountPlayer(cell, index, rawUrl, slot.audio, multi, hwIndex, delayMs)
+        }
+    }
+
+    private fun applySlot(session: PlaybackSession, index: Int) {
+        if (applyingSession) {
+            pendingSlot = session to index
+            return
+        }
+        val cell = grid.getChildAt(index) as? FrameLayout
+        if (cell == null || grid.childCount == 0) {
+            if (session.slots.any { it.isPlayable() }) applySession(session)
+            return
+        }
+        val slots = session.slots
+        val slot = slots.getOrNull(index) ?: return
+        val multi = slots.count { it.isPlayable() } > 1
+        val hwIndex = slots.indexOfFirst { it.audio && it.isPlayable() }.let { if (it >= 0) it else slots.indexOfFirst { it.isPlayable() } }
+        val rawUrl = slot.url
+        if (rawUrl.isNullOrBlank()) {
+            releasePane(index, multi)
+        } else if (playerBySlot[index] != null) {
+            retunePane(index, rawUrl, multi, hwIndex)
+        } else {
+            mountPlayer(cell, index, rawUrl, slot.audio, multi, hwIndex, 0L)
+        }
+        applyAudio(session)
+    }
+
+    private fun mountPlayer(
+        cell: FrameLayout,
+        index: Int,
+        rawUrl: String,
+        audio: Boolean,
+        multi: Boolean,
+        hwIndex: Int,
+        delayMs: Long,
+    ) {
+        startRunnables.remove(index)?.let { mainHandler.removeCallbacks(it) }
+        cell.setBackgroundColor(0)
+        cell.removeAllViews()
+        strokeBySlot.remove(index)
+        val url = if (multi && index != hwIndex) lightenStreamUrl(rawUrl) else rawUrl
+        val view =
+            PlayerView(this).apply {
+                useController = false
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                )
+            }
+        val player = buildPlayer(multi && index != hwIndex)
+        player.volume = if (audio) 1f else 0f
+        playerBySlot[index] = player
+        val errorLabel = paneErrorLabel()
+        player.addListener(
+            object : Player.Listener {
+                override fun onPlayerError(error: PlaybackException) {
+                    Log.e(tag, "pane $index error: ${error.message}", error)
+                    errorLabel.visibility = View.VISIBLE
+                    chromeMessage.text = "Pane ${index + 1}: ${error.message ?: getString(R.string.pane_failed)}"
+                    chromeMessage.visibility = View.VISIBLE
+                    showChrome(focusSettings = false)
                 }
-            }, delayMs)
+            },
+        )
+        view.player = player
+        cell.addView(view)
+        cell.addView(errorLabel)
+        if (multi) strokeBySlot[index] = addStroke(cell, audio = audio)
+        views.add(view)
+        players.add(player)
+        scheduleStart(index, player, url, delayMs)
+    }
+
+    private fun retunePane(index: Int, rawUrl: String, multi: Boolean, hwIndex: Int) {
+        val player = playerBySlot[index] ?: return
+        (grid.getChildAt(index) as? FrameLayout)?.let { hidePaneError(it) }
+        val url = if (multi && index != hwIndex) lightenStreamUrl(rawUrl) else rawUrl
+        scheduleStart(index, player, url, 0L)
+    }
+
+    private fun releasePane(index: Int, multi: Boolean) {
+        startRunnables.remove(index)?.let { mainHandler.removeCallbacks(it) }
+        val cell = grid.getChildAt(index) as? FrameLayout ?: return
+        val player = playerBySlot.remove(index)
+        if (player != null) {
+            val view = views.find { it.player == player }
+            view?.player = null
+            if (view != null) views.remove(view)
+            players.remove(player)
+            try {
+                player.stop()
+                player.release()
+            } catch (_: Exception) {
+            }
+        }
+        strokeBySlot.remove(index)
+        cell.removeAllViews()
+        cell.setBackgroundColor(getColor(R.color.empty_pane))
+        if (multi) strokeBySlot[index] = addStroke(cell, audio = false)
+    }
+
+    private fun scheduleStart(index: Int, player: ExoPlayer, url: String, delayMs: Long) {
+        startRunnables.remove(index)?.let { mainHandler.removeCallbacks(it) }
+        val run = Runnable {
+            startRunnables.remove(index)
+            if (players.contains(player)) {
+                player.setMediaItem(MediaItem.fromUri(url))
+                player.playWhenReady = true
+                player.prepare()
+            }
+        }
+        startRunnables[index] = run
+        mainHandler.postDelayed(run, delayMs)
+    }
+
+    private fun hidePaneError(cell: FrameLayout) {
+        for (i in 0 until cell.childCount) {
+            val child = cell.getChildAt(i)
+            if (child.tag == "pane-error") child.visibility = View.GONE
         }
     }
 
@@ -344,6 +437,7 @@ class PlayerActivity : AppCompatActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
             )
+            tag = "pane-error"
         }
 
     private fun buildPlayer(preferSoftware: Boolean): ExoPlayer {
@@ -397,6 +491,7 @@ class PlayerActivity : AppCompatActivity() {
         views.clear()
         playerBySlot.clear()
         strokeBySlot.clear()
+        startRunnables.clear()
         grid.removeAllViews()
     }
 }

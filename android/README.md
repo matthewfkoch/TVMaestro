@@ -16,8 +16,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 |--------|------|------|
 | GET | `/api/health` | |
 | GET | `/api/info` | capabilities + CEC flags |
-| POST | `/api/session` | `{ id, mode, layout, slots:[{url,title,audio}] }` |
-| GET | `/api/session` | current session |
+| POST | `/api/session` | `{ id, mode, layout, slots:[{url,title,audio,channel_id}] }` |
+| GET | `/api/session` | current session, including which slot has `audio` |
+| POST | `/api/session/slot` | `{ index, audio_index, slot:{url,title,audio,channel_id} }` — replace one pane; other players stay up |
+| POST | `/api/session/audio` | `{ index }` — move audio focus without restarting streams |
 | POST | `/api/session/stop` | |
 | POST | `/api/cec` | `{ action: power_on\|power_off\|volume_up\|volume_down\|mute }` |
 

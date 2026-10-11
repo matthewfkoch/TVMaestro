@@ -4,7 +4,7 @@ Full-featured tvOS app that speaks the same LAN control protocol as the Android 
 
 ## Features
 
-- Control API on port **9093** (configurable): health, info, session start/stop, CEC volume/mute
+- Control API on port **9093** (configurable): health, info, session start/stop, live pane replace, audio focus. Volume and power are Companion presses from the server, not this app's `/api/cec`
 - Multiview layouts `1`, `2x1`, `1x2`, `2x2`, `3x3` with empty-pane placeholders and single audio focus
 - KSPlayer grid with staggered start, per-pane errors, title chips, and Now Playing metadata
 - Volume and mute from the guide use the same Companion presses as the Siri Remote (pair the Apple TV first)
@@ -57,9 +57,12 @@ Simulator-only build: `scripts/build-appletv.sh`
 | GET | `/api/health` | |
 | GET | `/api/info` | `platform: tvos`, capabilities, CEC flags |
 | POST | `/api/session` | `{ id, mode, layout, slots:[{url,title,audio,channel_id}] }` |
-| GET | `/api/session` | current session |
+| GET | `/api/session` | current session, including which slot has `audio` |
+| POST | `/api/session/slot` | `{ index, audio_index, slot:{url,title,audio,channel_id} }` — replace one pane; other players stay up |
+| POST | `/api/session/audio` | `{ index }` — move audio focus without restarting streams |
 | POST | `/api/session/stop` | |
-| POST | `/api/cec` | `volume_up` / `volume_down` / `mute` (power returns `success: false`) |
+| POST | `/api/cec` | Always `success: false`. Volume, mute, and power are Companion presses from the server after pairing |
+| POST | `/api/guide` | `{ registered, paired, name }` — on-device registration state from the server |
 
 Optional header: `X-Auth-Token`.
 
@@ -72,13 +75,13 @@ The app plays the original MPEG-TS stream, including MPEG-2, with KSPlayer softw
 | Capability | Status |
 |------------|--------|
 | Playback + multiview | Yes |
-| Volume / mute from web UI | In-app gain on audio-focus pane |
+| Volume / mute from web UI | Companion presses, the same as the Siri Remote, after pairing. Playback stays at full scale on the audible pane |
 | Wake / Sleep of the Apple TV | After one Companion pairing (Edit device → Pair). The television follows only if Control TVs and Receivers is on. |
 | Open the app from the guide | After the same pairing |
 
 ## Version
 
-0.4.1
+0.4.2
 
 ## License
 

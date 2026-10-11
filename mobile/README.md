@@ -56,3 +56,5 @@ scripts/testflight-ios.sh
 ```
 
 That registers `com.tvmaestro.companion` if needed, archives a Release build, and uploads it to TestFlight. Internal testers can install it from the TestFlight app once processing finishes. This is a separate app from the Apple TV client.
+
+A version tag (`v*`) runs the same upload from GitHub Actions (`.github/workflows/testflight.yml`) when the App Store Connect secrets are set. The Android companion APK is attached to that GitHub Release.

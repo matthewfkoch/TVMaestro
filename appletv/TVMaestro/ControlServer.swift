@@ -4,6 +4,7 @@ import UIKit
 enum ControlEvent {
     case session(PlaybackSession, warning: String?)
     case audio(PlaybackSession)
+    case slot(PlaybackSession)
     case stopped
     case failed(String)
     case guide(registered: Bool, paired: Bool)
@@ -21,7 +22,7 @@ final class ControlServer {
 
     static let multiviewMax = 9
     static let versionName =
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.4.0"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.4.2"
 
     init(
         port: UInt16,
@@ -119,6 +120,8 @@ final class ControlServer {
             return setSession(body)
         case ("POST", "/api/session/audio"):
             return setAudio(body)
+        case ("POST", "/api/session/slot"):
+            return replaceSlot(body)
         case ("POST", "/api/session/stop"):
             return stopSession()
         case ("POST", "/api/cec"):
@@ -220,6 +223,70 @@ final class ControlServer {
             payload["session"] = obj
         }
         return Self.json(200, payload)
+    }
+
+    private func replaceSlot(_ body: Data) -> (Int, Data, String) {
+        struct SlotBody: Decodable {
+            var index: Int?
+            var audio_index: Int?
+            var slot: SessionSlot?
+        }
+        guard let decoded = try? JSONDecoder().decode(SlotBody.self, from: body),
+              let index = decoded.index,
+              let slot = decoded.slot
+        else {
+            return Self.json(400, ["success": false, "message": "Missing index or slot"])
+        }
+        guard applySlotReplace(index: index, slot: slot, audioIndex: decoded.audio_index) else {
+            lock.lock()
+            let playing = current != nil
+            lock.unlock()
+            let message = playing ? "Could not replace that pane" : "No session"
+            return Self.json(400, ["success": false, "message": message])
+        }
+        lock.lock()
+        let session = current
+        lock.unlock()
+        var payload: [String: Any] = ["success": true]
+        if let session, let obj = Self.asJSONObject(session) {
+            payload["session"] = obj
+        }
+        return Self.json(200, payload)
+    }
+
+    /// Swap one pane's stream. Other players stay mounted.
+    @discardableResult
+    private func applySlotReplace(index: Int, slot: SessionSlot, audioIndex: Int?) -> Bool {
+        lock.lock()
+        guard var session = current else {
+            lock.unlock()
+            return false
+        }
+        let capacity = LayoutGeometry.capacity(session.layout)
+        guard index >= 0, index < capacity else {
+            lock.unlock()
+            return false
+        }
+        while session.slots.count < capacity {
+            session.slots.append(SessionSlot())
+        }
+        session.slots[index] = slot
+        guard session.slots.contains(where: \.isPlayable) else {
+            lock.unlock()
+            return false
+        }
+        let focus = audioIndex.flatMap { session.slots.indices.contains($0) ? $0 : nil }
+            ?? session.slots.firstIndex(where: { $0.audio && $0.isPlayable })
+            ?? session.slots.firstIndex(where: \.isPlayable)
+        if let focus {
+            for i in session.slots.indices {
+                session.slots[i].audio = i == focus && session.slots[i].isPlayable
+            }
+        }
+        current = session
+        lock.unlock()
+        onEvent(.slot(session))
+        return true
     }
 
     private func setAudio(_ body: Data) -> (Int, Data, String) {

@@ -266,6 +266,12 @@ final class AppModel: ObservableObject {
                 case .audio(let s):
                     self.session = s
                     self.showAudioHUD()
+                case .slot(let s):
+                    self.session = s
+                    let playable = s.slots.filter(\.isPlayable).count
+                    if playable > 0 {
+                        self.statusLine = "Playing \(playable) · \(s.layout)"
+                    }
                 case .stopped:
                     self.applySession(nil)
                 case .failed(let message):
