@@ -1,0 +1,133 @@
+name: App Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: App to submit
+        type: choice
+        options:
+          - tvos
+          - ios
+          - both
+        default: tvos
+      version:
+        description: Marketing version, for example 0.4.3
+        required: true
+        type: string
+      build_number:
+        description: Processed TestFlight build number
+        required: true
+        type: string
+      automatic_release:
+        description: Release automatically when Apple approves
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  tvos:
+    name: Submit Apple TV
+    if: inputs.platform == 'tvos' || inputs.platform == 'both'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: appletv
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check App Store Connect secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [[ -z "$ASC_KEY_ID" || -z "$ASC_ISSUER_ID" || -z "$ASC_PRIVATE_KEY" || -z "$APPLE_TEAM_ID" ]]; then
+            echo "::error::App Store submission requires ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY, and APPLE_TEAM_ID. The key must be App Manager or Admin."
+            exit 1
+          fi
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.1"
+          bundler-cache: true
+          working-directory: appletv
+
+      - name: Install Fastlane
+        run: bundle install
+
+      - name: Configure App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          mkdir -p "$HOME/private_keys"
+          KEY_PATH="$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY" > "$KEY_PATH"
+          echo "ASC_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Submit for review
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_VERSION: ${{ inputs.version }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          AUTOMATIC_RELEASE: ${{ inputs.automatic_release }}
+        run: bundle exec fastlane submit
+
+  ios:
+    name: Submit companion
+    if: inputs.platform == 'ios' || inputs.platform == 'both'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check App Store Connect secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [[ -z "$ASC_KEY_ID" || -z "$ASC_ISSUER_ID" || -z "$ASC_PRIVATE_KEY" || -z "$APPLE_TEAM_ID" ]]; then
+            echo "::error::App Store submission requires ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY, and APPLE_TEAM_ID. The key must be App Manager or Admin."
+            exit 1
+          fi
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.1"
+          bundler-cache: true
+          working-directory: appletv
+
+      - name: Install Fastlane
+        working-directory: appletv
+        run: bundle install
+
+      - name: Configure App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          mkdir -p "$HOME/private_keys"
+          KEY_PATH="$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY" > "$KEY_PATH"
+          echo "ASC_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Submit for review
+        working-directory: mobile
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/appletv/Gemfile
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_VERSION: ${{ inputs.version }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          AUTOMATIC_RELEASE: ${{ inputs.automatic_release }}
+        run: bundle exec fastlane ios submit

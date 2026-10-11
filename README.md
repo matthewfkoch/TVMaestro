@@ -116,33 +116,40 @@ scripts/build-all.sh
 | `scripts/build-android.sh` | `assembleDebug` APK |
 | `scripts/build-appletv.sh` | tvOS Simulator build (needs full Xcode) |
 
-**CI** (`.github/workflows/ci.yml`) runs on every push/PR: pytest, web build, Docker image, Android TV debug APK, Apple TV build, companion Android debug APK, and companion iOS Simulator build. Artifacts: `web-dist`, `android-debug-apk`, `appletv-app`, `companion-android-debug-apk`, `companion-ios-app`.
+**CI** (`.github/workflows/ci.yml`) runs on pushes to `main` and `dev`, and on pull requests: pytest, web build, Docker image, Android TV debug APK, Apple TV build, companion Android debug APK, and companion iOS Simulator build. Artifacts: `web-dist`, `android-debug-apk`, `appletv-app`, `companion-android-debug-apk`, `companion-ios-app`.
 
 ### Releases
 
-Tagged releases (`v*`) trigger `.github/workflows/release.yml`, which:
+Day-to-day work lands on `dev`. A push there runs CI and publishes `ghcr.io/matthewfkoch/tvmaestro:dev` plus an immutable `sha-<12-character commit>` tag. It does not move `:latest`.
 
-1. Runs the server tests, then publishes a multi-arch image (`linux/amd64` + `linux/arm64`) to GitHub Container Registry: `ghcr.io/matthewfkoch/tvmaestro:<version>` and `:latest`
-2. Builds the Android TV APK and the companion Android APK, and attaches both to a [GitHub Release](https://github.com/matthewfkoch/TVMaestro/releases) on this repo
+Pushes to `dev` that change `appletv/` or `mobile/` upload the Apple TV app and the iOS companion to TestFlight. You can also run `.github/workflows/testflight.yml` by hand. Version tags do not upload another Apple binary. Local uploads with `scripts/testflight-appletv.sh` and `scripts/testflight-ios.sh` do not need the GitHub secrets. If `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, or `APPLE_TEAM_ID` is missing, the TestFlight jobs skip.
 
-The same tag triggers `.github/workflows/testflight.yml`, which uploads the Apple TV app and the iOS companion to TestFlight when `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID` are set. If those secrets are missing, those jobs skip. Local uploads with `scripts/testflight-appletv.sh` and `scripts/testflight-ios.sh` do not need them.
-
-A manual run of the Release workflow (no tag) publishes `:dev` only. Do not retag a version that already shipped.
-
-If the package is still private (the default when the repo started private), open **Packages → tvmaestro → Package settings**, link it to this repo, and set visibility to **Public** so `docker pull` works from the public registry.
-
-Bump these together, then tag:
-
-- `server/tvmaestro/__version__.py`
-- `web/package.json`
-- Android `versionName` and `versionCode` in `android/app/build.gradle.kts`
-- Apple TV `MARKETING_VERSION` in `appletv/TVMaestro.xcodeproj` (`Info.plist` reads `$(MARKETING_VERSION)` and `$(CURRENT_PROJECT_VERSION)`; Fastlane increments the build number on upload)
-- Companion `version` in `mobile/package.json`, `versionName` and `versionCode` in `mobile/android/app/build.gradle`, and `MARKETING_VERSION` in `mobile/ios/App/App.xcodeproj`
+When a TestFlight build is the one you want to ship, fast-forward `main` to that commit and tag it:
 
 ```bash
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
+
+`.github/workflows/release.yml` then:
+
+1. Retags the existing `sha-<12-character commit>` image to `ghcr.io/matthewfkoch/tvmaestro:<version>` and `:latest` when that image exists. It builds from source only when the sha image was never published.
+2. Builds the Android TV APK and the companion Android APK, and attaches both to a [GitHub Release](https://github.com/matthewfkoch/TVMaestro/releases) on this repo
+
+A manual run of the Release workflow (no tag) publishes `:dev` and the sha tag only. Do not retag a version that already shipped.
+
+App Store review does not build a new binary. Run `.github/workflows/appstore.yml` with the marketing version and the processed TestFlight build number. Approval leaves the app unreleased unless you opt in, so you can publish `:latest` first when the app depends on a new server. The API key must be App Manager or Admin. The iOS companion is not submitted until `mobile/fastlane/metadata` exists. See [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
+
+If the package is still private (the default when the repo started private), open **Packages → tvmaestro → Package settings**, link it to this repo, and set visibility to **Public** so `docker pull` works from the public registry.
+
+Bump these together on `dev` before the TestFlight upload. Fastlane chooses the Apple build number from App Store Connect and does not commit it. `Info.plist` reads `$(MARKETING_VERSION)` and `$(CURRENT_PROJECT_VERSION)`.
+
+- `server/tvmaestro/__version__.py`
+- `web/package.json`
+- Android `versionName` and `versionCode` in `android/app/build.gradle.kts`
+- Apple TV `MARKETING_VERSION` in `appletv/TVMaestro.xcodeproj`
+- Companion `version` in `mobile/package.json`, `versionName` and `versionCode` in `mobile/android/app/build.gradle`, and `MARKETING_VERSION` in `mobile/ios/App/App.xcodeproj`
+- `CHANGELOG.md` and `appletv/fastlane/metadata/en-US/release_notes.txt`
 
 **Signing:** release APKs are signed with the repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. The same keystore signs the Android TV client and the companion. Do not generate a new keystore. Upgrades install over a previous release only when both APKs use this key. If those secrets are missing, the workflow attaches debug APKs (`tvmaestro-android-<version>-debug.apk` and `tvmaestro-companion-<version>-debug.apk`) instead.
 
@@ -160,7 +167,7 @@ scripts/testflight-appletv.sh
 
 One-time: create the tvOS app in App Store Connect and set `ascAppId` in `appletv/testflight.json`. Full steps, including a public link for other Apple TVs: `appletv/docs/TESTFLIGHT.md`.
 
-GitHub Actions upload is `.github/workflows/testflight.yml` and needs the API key secrets above. The same workflow uploads the iOS companion. Local Apple ID upload does not. The upload places the build in App Store Connect; the public link is turned on there after processing.
+GitHub Actions upload is `.github/workflows/testflight.yml` on `dev` (when `appletv/` or `mobile/` changes) or when you run it by hand. It needs the API key secrets above. The same workflow uploads the iOS companion. Local Apple ID upload does not. The upload places the build in App Store Connect; the public link is turned on there after processing.
 
 ### Xcode direct install (development)
 

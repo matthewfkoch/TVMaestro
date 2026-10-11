@@ -62,18 +62,15 @@ platform :ios do
 
     setup
 
-    current_build = get_build_number(xcodeproj: project).to_i
-    run_number = ENV["GITHUB_RUN_NUMBER"].to_i
-    next_build = [current_build + 1, run_number].max
+    marketing_version = marketing_version_for_upload(project, "App")
     increment_build_number(
-      build_number: next_build.to_s,
+      build_number: next_testflight_build_number(
+        app_identifier: cfg["bundleId"] || "com.tvmaestro.companion",
+        marketing_version: marketing_version,
+        platform: "ios"
+      ).to_s,
       xcodeproj: project
     )
-
-    if ENV["GITHUB_REF_NAME"]&.start_with?("v")
-      version = ENV["GITHUB_REF_NAME"].delete_prefix("v")
-      increment_version_number(version_number: version, xcodeproj: project) if version.match?(/^\d+\.\d+\.\d+/)
-    end
 
     # Archive without a signature. Automatic signing would create an iOS
     # development profile here, and that fails when the team has no devices.
@@ -108,6 +105,51 @@ platform :ios do
     upload_to_testflight(**upload_args)
   end
 
+  desc "Submit an existing iOS TestFlight build for App Store review"
+  lane :submit do
+    unless Dir.exist?(File.expand_path("metadata", __dir__))
+      UI.user_error!(
+        "The iOS companion has no App Store listing metadata yet. Add mobile/fastlane/metadata before submitting it for review."
+      )
+    end
+
+    cfg = testflight_config
+    project = "ios/App/App.xcodeproj"
+    version = submit_version(project, "App")
+    build_number = required_build_number
+    app_identifier = cfg["bundleId"] || "com.tvmaestro.companion"
+
+    ensure_build_processed(
+      app_identifier: app_identifier,
+      marketing_version: version,
+      build_number: build_number,
+      platform: "IOS"
+    )
+
+    upload_args = upload_credentials_hash.merge(
+      app_identifier: app_identifier,
+      app_version: version,
+      build_number: build_number,
+      platform: "ios",
+      team_id: resolve_team_id,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: true,
+      automatic_release: automatic_release?,
+      force: true,
+      run_precheck_before_submit: false,
+      precheck_include_in_app_purchases: false,
+      submission_information: {
+        export_compliance_uses_encryption: false,
+        content_rights_contains_third_party_content: false,
+        add_id_info_uses_idfa: false
+      }
+    )
+
+    upload_to_app_store(**upload_args)
+  end
+
   def signing_xcargs(team_id)
     args = ["-allowProvisioningUpdates", "DEVELOPMENT_TEAM=#{team_id}"]
     if ENV["GITHUB_ACTIONS"] == "true"
@@ -127,6 +169,84 @@ platform :ios do
     team = ENV["APPLE_TEAM_ID"].to_s
     UI.user_error!("Set APPLE_TEAM_ID") if team.empty?
     team
+  end
+
+  def marketing_version_for_upload(xcodeproj, target)
+    if ENV["GITHUB_REF_NAME"]&.match?(/\Av\d+\.\d+\.\d+\z/)
+      version = ENV["GITHUB_REF_NAME"].delete_prefix("v")
+      increment_version_number(version_number: version, xcodeproj: xcodeproj)
+      return version
+    end
+    get_version_number(xcodeproj: xcodeproj, target: target)
+  end
+
+  def next_testflight_build_number(app_identifier:, marketing_version:, platform:)
+    creds = upload_credentials_hash
+    options = {
+      app_identifier: app_identifier,
+      platform: platform,
+      version: marketing_version,
+      initial_build_number: 0
+    }
+    options[:api_key] = creds[:api_key] if creds[:api_key]
+    options[:username] = creds[:username] if creds[:username]
+    config = FastlaneCore::Configuration.create(
+      Fastlane::Actions::LatestTestflightBuildNumberAction.available_options,
+      options
+    )
+    Fastlane::Actions::LatestTestflightBuildNumberAction.run(config).to_i + 1
+  end
+
+  def submit_version(xcodeproj, target)
+    version = ENV["APP_VERSION"].to_s
+    return version unless version.empty?
+    get_version_number(xcodeproj: xcodeproj, target: target)
+  end
+
+  def required_build_number
+    build_number = ENV["BUILD_NUMBER"].to_s
+    if build_number.empty?
+      UI.user_error!("Set BUILD_NUMBER to the processed TestFlight build to submit")
+    end
+    build_number
+  end
+
+  def automatic_release?
+    ENV.fetch("AUTOMATIC_RELEASE", "false").to_s.downcase == "true"
+  end
+
+  def ensure_build_processed(app_identifier:, marketing_version:, build_number:, platform:)
+    creds = upload_credentials_hash
+    if creds[:api_key]
+      Spaceship::ConnectAPI.token ||= Spaceship::ConnectAPI::Token.create(**creds[:api_key])
+    elsif creds[:username] && Spaceship::ConnectAPI.token.nil?
+      Spaceship::ConnectAPI.login(creds[:username], use_portal: false, use_tunes: true)
+    end
+
+    app = Spaceship::ConnectAPI::App.find(app_identifier)
+    UI.user_error!("No App Store Connect app for #{app_identifier}") unless app
+
+    builds = Spaceship::ConnectAPI::Build.all(
+      app_id: app.id,
+      version: marketing_version,
+      build_number: build_number,
+      platform: platform
+    )
+    build = builds.find { |item| item.version.to_s == build_number.to_s }
+    unless build
+      UI.user_error!(
+        "Build #{build_number} for #{marketing_version} was not found. Upload it to TestFlight and wait for processing."
+      )
+    end
+
+    state = build.processing_state.to_s
+    if state == Spaceship::ConnectAPI::Build::ProcessingState::PROCESSING
+      UI.user_error!(
+        "Build #{build_number} is still processing. Wait until TestFlight finishes processing, then submit again."
+      )
+    elsif state != Spaceship::ConnectAPI::Build::ProcessingState::VALID
+      UI.user_error!("Build #{build_number} cannot be submitted (processing state: #{state}).")
+    end
   end
 
   def upload_credentials_hash

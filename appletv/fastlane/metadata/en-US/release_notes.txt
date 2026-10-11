@@ -1,1 +1,1 @@
-Play video from your home network, including up to nine pictures at once.
+Change one picture in a multiview without restarting the others.

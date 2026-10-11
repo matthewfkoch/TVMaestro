@@ -38,4 +38,4 @@ Fastlane skips “What’s New” on the first version. Add review contact only 
 3. Push `docs/privacy.md` to `main` so the privacy URL loads.
 4. Fill in the review contact files above, then run `bundle exec fastlane metadata`.
 5. In App Store Connect, set the price to Free and App Privacy to Data Not Collected.
-6. Submit for Review when you want to.
+6. Submit for Review when you want to. Run the App Store workflow (`.github/workflows/appstore.yml`) with this marketing version and the processed TestFlight build number, or from `appletv` run `BUILD_NUMBER=<build> bundle exec fastlane submit`. That submits the existing build and does not upload a new binary. Leave automatic release off until the matching server image is on `:latest`.

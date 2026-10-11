@@ -31,6 +31,14 @@ Register the iOS bundle ID and App Store Connect app
 
 Build Release and upload to TestFlight
 
+### ios submit
+
+```sh
+[bundle exec] fastlane ios submit
+```
+
+Submit an existing iOS TestFlight build for App Store review. Refuses to run until `fastlane/metadata` exists.
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

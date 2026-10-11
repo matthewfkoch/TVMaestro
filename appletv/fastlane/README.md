@@ -47,6 +47,14 @@ Build App Store IPA locally (no upload)
 
 Upload tvOS App Store listing only (no binary, no review submission)
 
+### tvos submit
+
+```sh
+[bundle exec] fastlane tvos submit
+```
+
+Submit an existing tvOS TestFlight build for App Store review
+
 ### tvos screenshots
 
 ```sh
