@@ -47,7 +47,7 @@ jobs:
       - name: Build
         run: npm run build
       - name: Upload web dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: web/dist
@@ -97,7 +97,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon :app:assembleDebug
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
@@ -117,7 +117,7 @@ jobs:
           chmod +x scripts/build-appletv.sh
           scripts/build-appletv.sh
       - name: Upload app bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: appletv-app
           path: appletv/build/Build/Products/**/TVMaestro.app
@@ -167,7 +167,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon assembleDebug
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: companion-android-debug-apk
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
@@ -209,7 +209,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
       - name: Upload app bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: companion-ios-app
           path: mobile/ios/DerivedData/Build/Products/**/App.app
