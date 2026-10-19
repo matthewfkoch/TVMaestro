@@ -140,7 +140,7 @@ jobs:
   publish-docker:
     name: Publish Docker manifest
     needs: [resolve, build-docker]
-    if: needs.resolve.result == 'success' && (needs.build-docker.result == 'success' || needs.resolve.outputs.mode == 'promote')
+    if: ${{ !cancelled() && needs.resolve.result == 'success' && (needs.build-docker.result == 'success' || needs.resolve.outputs.mode == 'promote') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -449,7 +449,7 @@ jobs:
   github-release:
     name: Publish GitHub Release
     needs: [publish-docker, android, companion-android]
-    if: github.ref_type == 'tag'
+    if: ${{ !cancelled() && github.ref_type == 'tag' && needs.publish-docker.result == 'success' && needs.android.result == 'success' && needs.companion-android.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -1,6 +1,6 @@
 # TVMaestro Android client
 
-Kotlin Android TV app with Media3 ExoPlayer and an embedded control API on port **9093**.
+Kotlin Android TV app with Media3 ExoPlayer and an embedded control API on port **6791** by default.
 
 ## Build
 

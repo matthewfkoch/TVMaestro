@@ -45,7 +45,7 @@ final class AppModel: ObservableObject {
 
     init() {
         let storedPort = defaults.object(forKey: Keys.port) as? Int
-        port = storedPort ?? 9093
+        port = storedPort ?? 6791
         authToken = defaults.string(forKey: Keys.token) ?? ""
         guideSeen = defaults.bool(forKey: Keys.guideSeen)
         guidePaired = defaults.bool(forKey: Keys.guidePaired)

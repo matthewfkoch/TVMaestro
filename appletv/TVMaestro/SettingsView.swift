@@ -130,7 +130,7 @@ struct SettingsView: View {
         case .port:
             SettingsTextEditor(
                 title: "Control port",
-                prompt: "9093",
+                prompt: "6791",
                 text: $portText,
                 onCommit: persist
             )

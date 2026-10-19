@@ -65,7 +65,7 @@ class Device(BaseModel):
     id: str
     name: str
     host: str
-    port: int = 9093
+    port: int = 6791
     token: str = ""
     online: bool = False
     last_seen: Optional[float] = None
@@ -80,7 +80,7 @@ class DeviceCreate(BaseModel):
     id: Optional[str] = None
     name: str
     host: str
-    port: int = 9093
+    port: int = 6791
     token: str = ""
     # tvos seeds Apple identity before the app has ever been online, so the
     # guide can pair and launch it. android (or omitted) waits for /api/info.

@@ -4,7 +4,7 @@ Full-featured tvOS app that speaks the same LAN control protocol as the Android 
 
 ## Features
 
-- Control API on port **9093** (configurable): health, info, session start/stop, live pane replace, audio focus. Volume and power are Companion presses from the server, not this app's `/api/cec`
+- Control API on port **6791** by default (configurable): health, info, session start/stop, live pane replace, audio focus. Volume and power are Companion presses from the server, not this app's `/api/cec`
 - Multiview layouts `1`, `2x1`, `1x2`, `2x2`, `3x3` with empty-pane placeholders and single audio focus
 - KSPlayer grid with staggered start, per-pane errors, title chips, and Now Playing metadata
 - Volume and mute from the guide use the same Companion presses as the Siri Remote (pair the Apple TV first)

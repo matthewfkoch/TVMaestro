@@ -10,7 +10,7 @@ type Props = {
 export default function AddDeviceModal({ open, onClose, onAdded }: Props) {
   const [name, setName] = useState("Living Room");
   const [host, setHost] = useState("");
-  const [port, setPort] = useState(9093);
+  const [port, setPort] = useState(6791);
   const [token, setToken] = useState("");
   const [platform, setPlatform] = useState<"android" | "tvos">("android");
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +67,7 @@ export default function AddDeviceModal({ open, onClose, onAdded }: Props) {
             <input
               type="number"
               value={port}
-              onChange={(e) => setPort(Number(e.target.value) || 9093)}
+              onChange={(e) => setPort(Number(e.target.value) || 6791)}
             />
           </div>
           <div className="field">

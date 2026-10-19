@@ -65,7 +65,7 @@ class SettingsActivity : AppCompatActivity() {
         testSleep.setOnClickListener { runServerAction(actionStatus, "power_off") }
 
         saveButton.setOnClickListener {
-            val port = (portInput.text.toString().toIntOrNull() ?: 9093).coerceIn(1024, 65535)
+            val port = (portInput.text.toString().toIntOrNull() ?: 6791).coerceIn(1024, 65535)
             Prefs.setPort(this, port)
             Prefs.setToken(this, tokenInput.text.toString())
             Prefs.setServerUrl(this, serverInput.text.toString())

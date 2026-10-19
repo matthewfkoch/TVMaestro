@@ -22,13 +22,15 @@ EPG orchestrator for [Channels DVR](https://getchannels.com/) with a polished we
 
 - **Server** (Python / FastAPI, port **6790**) — ingests Channels DVR M3U + XMLTV, device registry, session orchestration
 - **Web UI** (React / Vite) — broadcast-style EPG, tune sheet, multiview composer, CEC controls
-- **Android client** (Kotlin / Media3 ExoPlayer, control API **9093**) — plays HLS/MPEG-TS; best-effort HDMI-CEC
+- **Android client** (Kotlin / Media3 ExoPlayer, control API **6791** by default) — plays HLS/MPEG-TS; best-effort HDMI-CEC
 - **Apple TV** (`appletv/`) — tvOS client (same control API as Android; KSPlayer plays MPEG-TS, including MPEG-2; up to nine-pane multiview)
 
 Control plane: browser → TVMaestro server → Android TV or Apple TV client.  
 Media plane: the client pulls stream URLs directly from Channels (or APITuner).
 
 **Security note:** the control API is unauthenticated by default (trusted LAN). Do not expose port `6790` to the public internet. `client_auth_token` in config is reserved for a future auth gate and is not a substitute for network isolation.
+
+Upgrading from 0.4.2 or earlier? The default TV control port is now `6791`; see the [port upgrade instructions](docs/TROUBLESHOOTING.md#device-offline-after-upgrading-to-043) before updating clients.
 
 ## Quick start (Docker)
 
@@ -155,7 +157,7 @@ Bump these together on `dev` before the TestFlight upload. Fastlane chooses the 
 
 ### Apple TV client
 
-Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** and choose **Apple TV** with the LAN IP and port `9093`. Pair it once under **Edit device** (PIN on the Apple TV).
+Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** and choose **Apple TV** with the LAN IP and port `6791` (the default). Pair it once under **Edit device** (PIN on the Apple TV).
 
 ### TestFlight
 
@@ -187,7 +189,7 @@ cd android && ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Open `android/` in Android Studio if you prefer the IDE. Then in the web UI **+ Device** with the device LAN IP and port `9093`.
+Open `android/` in Android Studio if you prefer the IDE. Then in the web UI **+ Device** with the device LAN IP and port `6791` (the default).
 
 Multiview max depends on the SoC: capable devices report up to 4 panes; many Amlogic/MediaTek sticks are clamped to 1.
 

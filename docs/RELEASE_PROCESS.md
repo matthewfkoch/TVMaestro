@@ -38,6 +38,10 @@ Pushes to `dev` that change `appletv/**` or `mobile/**` upload the Apple TV app 
 
 TestFlight builds expire 90 days after upload.
 
+## Candidate checks
+
+Before tagging, require successful CI, Docker candidate publication, and both TestFlight uploads for the exact candidate commit. Smoke-test fresh installs and upgrades from the previous release on Android TV and Apple TV: confirm the displayed control port matches the guide registration, tune a channel, replace a multiview pane, move audio focus, and verify paired wake/sleep and app launch. For 0.4.3, follow the [port upgrade instructions](TROUBLESHOOTING.md#device-offline-after-upgrading-to-043), including an upgrade where the TV settings were never saved and one with a custom saved port.
+
 ## Tagging
 
 ```bash

@@ -113,7 +113,7 @@ The link is opened on the phone, not on the Apple TV.
 
 An email invite is the other path. The tester opens the email, follows **View in TestFlight**, and redeems the code in **TestFlight** on the Apple TV.
 
-After install: web UI → **+ Device** → Apple TV LAN IP → port **9093**.
+After install: web UI → **+ Device** → Apple TV LAN IP → port **6791** (the default).
 
 ## CI (optional)
 
