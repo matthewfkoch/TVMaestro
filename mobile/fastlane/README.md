@@ -37,7 +37,7 @@ Build Release and upload to TestFlight
 [bundle exec] fastlane ios submit
 ```
 
-Submit an existing iOS TestFlight build for App Store review. Refuses to run until `fastlane/metadata` exists.
+Submit an existing iOS TestFlight build for App Store review
 
 ----
 
