@@ -36,7 +36,7 @@ jobs:
       run:
         working-directory: appletv
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check App Store Connect secrets
         env:
@@ -85,7 +85,7 @@ jobs:
     if: inputs.platform == 'ios' || inputs.platform == 'both'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check App Store Connect secrets
         env:
