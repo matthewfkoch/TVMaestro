@@ -58,3 +58,9 @@ scripts/testflight-ios.sh
 That registers `com.tvmaestro.companion` if needed, archives a Release build, and uploads it to TestFlight. Internal testers can install it from the TestFlight app once processing finishes. This is a separate app from the Apple TV client.
 
 A push to `dev` that changes this app, or a manual run of `.github/workflows/testflight.yml`, uploads the same build when the App Store Connect secrets are set. A version tag does not upload another binary. The Android companion APK is attached to the GitHub Release for that tag.
+
+## App Review access
+
+The connection screen explains the server requirement and the app's features before connection. A private LAN address and a recording alone do not give a reviewer interactive access to the guide or television controls. The submission includes a demonstration recording; Apple has not confirmed whether additional interactive access is required. Any sample mode must be clearly labeled and available to all users; never detect reviewers or change functionality for review.
+
+The iOS upload preparation copies the current `www` assets and Capacitor configuration before archiving. Do not rely on assets left behind by an earlier simulator build.

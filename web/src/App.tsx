@@ -190,10 +190,9 @@ export default function App() {
           <Logo className="brand-mark" />
         </div>
         <div className="topbar-actions">
-          {status && (
-            <span className={`pill status-pill${status.last_error ? " warn" : ""}`}>
-              {status.channels} ch · {status.programmes.toLocaleString()} airings
-              {status.last_error ? " · sync error" : ""}
+          {status?.last_error && (
+            <span className="pill status-pill warn">
+              sync error
             </span>
           )}
           <button

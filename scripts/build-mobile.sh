@@ -70,6 +70,9 @@ download_xcframework() {
 }
 
 if [[ "$PREPARE_IOS_ONLY" == "1" ]]; then
+  # Copy current launcher assets and config before archiving. Otherwise this
+  # path can upload stale files left by an earlier full Capacitor sync.
+  npx --no-install cap copy ios
   prepare_ios_capacitor
   exit 0
 fi
