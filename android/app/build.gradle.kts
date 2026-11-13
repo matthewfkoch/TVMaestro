@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "com.tvmaestro.client"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.tvmaestro.client"
@@ -50,7 +50,7 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.leanback:leanback:1.0.0")
 
