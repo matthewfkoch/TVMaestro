@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.4
+
+- Explain the server requirement and available TV controls on the companion connection screen.
+- Include the current companion assets when preparing an iOS upload.
+- Show a sync indicator in the guide when a sync error occurs.
+- Update the web and Android build tools.
+
 ## 0.4.3
 
 - Use port `6791` by default for new Android TV and Apple TV clients and new guide registrations. Explicitly saved ports remain unchanged.
