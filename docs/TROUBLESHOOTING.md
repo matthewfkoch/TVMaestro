@@ -28,11 +28,25 @@ docker logs tvmaestro
 curl http://localhost:6790/api/status
 ```
 
+## Device offline after upgrading to 0.4.3
+
+The default TV control port changed from `9093` to `6791`. The server's own port remains `6790`. Existing guide registrations and explicitly saved TV control ports are preserved. A TV app that never saved its control port starts using `6791` after this upgrade.
+
+Before upgrading, you can explicitly save `9093` in the TV app's Settings to retain the old port. On Apple TV, if saving an unchanged value does nothing, change it to another available port and then back to `9093`.
+
+After upgrading:
+
+1. Open the TVMaestro app on the TV and note the control port in its displayed address or Settings.
+2. In the web guide, open **Edit device** for that TV and set the port to the same number. Alternatively, set the TV app's control port back to `9093` to match the existing registration.
+3. Allow the chosen port through any LAN firewall, then verify the device is online and tune a channel.
+
+Keep the existing device registration and pairing. A port-only change does not require deleting or re-pairing the device. When adding an older client to the upgraded guide, enter its actual port (usually `9093`) instead of accepting the new default.
+
 ## Android client cannot connect
 
 - verify the Android TV is on the same LAN as the TVMaestro server
 - confirm the device is registered through the web UI
-- check that port `9093` is reachable from the server to the client
+- check that the TV control port (default `6791`) is reachable from the server to the client
 - if the client is running behind a firewall, ensure traffic is allowed on the LAN
 
 ## Apple TV cannot pair or open from the guide

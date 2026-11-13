@@ -113,8 +113,8 @@ The link is opened on the phone, not on the Apple TV.
 
 An email invite is the other path. The tester opens the email, follows **View in TestFlight**, and redeems the code in **TestFlight** on the Apple TV.
 
-After install: web UI → **+ Device** → Apple TV LAN IP → port **9093**.
+After install: web UI → **+ Device** → Apple TV LAN IP → port **6791** (the default).
 
 ## CI (optional)
 
-GitHub Actions workflow `.github/workflows/testflight.yml` uses `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID`. Local uploads via Apple ID (above) do not need those secrets.
+GitHub Actions workflow `.github/workflows/testflight.yml` uploads when `dev` changes `appletv/` or `mobile/`, and when you run it by hand. It uses `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID`. Version tags do not upload a new build. Local uploads via Apple ID (above) do not need those secrets.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.3
+
+- Use port `6791` by default for new Android TV and Apple TV clients and new guide registrations. Explicitly saved ports remain unchanged.
+- **Upgrade:** clients with no saved control port switch from `9093` to `6791`, while existing guide registrations keep their old port. Set the TV app back to `9093` or update its port under **Edit device** in the guide to match the address shown by the TV app. See [upgrade instructions](docs/TROUBLESHOOTING.md#device-offline-after-upgrading-to-043).
+- Fix release promotion so a tested Docker candidate can be published when the build job is intentionally skipped.
+- Use the tested TestFlight builds for App Store submissions and improve iOS companion signing.
+
 ## 0.4.2
 
 - Change one live multiview pane from the guide without restarting the other streams. The server, web guide, Android TV, and Apple TV all speak the same slot-replace call.
