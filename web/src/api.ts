@@ -177,6 +177,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ index }),
     }),
+  replaceSessionSlot: (id: string, index: number, channelId: string | null) =>
+    req<Session>(`/api/sessions/${id}/slot`, {
+      method: "POST",
+      body: JSON.stringify({ index, channel_id: channelId }),
+    }),
   config: () => req<AppConfig>("/api/config"),
   saveConfig: (body: Partial<AppConfig>) =>
     req<AppConfig>("/api/config", { method: "PUT", body: JSON.stringify(body) }),

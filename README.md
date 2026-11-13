@@ -1,20 +1,36 @@
 # TVMaestro
 
+[![CI](https://github.com/matthewfkoch/TVMaestro/actions/workflows/ci.yml/badge.svg)](https://github.com/matthewfkoch/TVMaestro/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/container-ghcr.io%2Ftvmaestro-blue)](https://github.com/matthewfkoch/TVMaestro/pkgs/container/tvmaestro)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Android%20TV%20%7C%20tvOS%20%7C%20Web-lightgrey)](README.md)
+
 <img src="branding/logo-app-icon-512.png" alt="TVMaestro" width="96" height="96" />
 
-EPG orchestrator for [Channels DVR](https://getchannels.com/) with a polished web guide and an Android TV client that plays streams (including up to 4-way multiview). Optional YouTube/encoder path via [APITuner](https://github.com/matthewfkoch/APITuner).
+EPG orchestrator for [Channels DVR](https://getchannels.com/) with a polished web guide and an Android TV client that plays streams (including up to 4-way multiview). Optional YouTube/encoder path support via APITuner is also included.
+
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — contribution flow and local development setup
+- [SECURITY.md](SECURITY.md) — security reporting and vulnerability disclosure
+- [docs/README.md](docs/README.md) — documentation index
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — common setup and runtime issues
+- [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) — release workflow and versioning
+- [docs/DEVELOPER_QUICKSTART.md](docs/DEVELOPER_QUICKSTART.md) — local contributor quickstart
 
 ## Architecture
 
 - **Server** (Python / FastAPI, port **6790**) — ingests Channels DVR M3U + XMLTV, device registry, session orchestration
 - **Web UI** (React / Vite) — broadcast-style EPG, tune sheet, multiview composer, CEC controls
-- **Android client** (Kotlin / Media3 ExoPlayer, control API **9093**) — plays HLS/MPEG-TS; best-effort HDMI-CEC
+- **Android client** (Kotlin / Media3 ExoPlayer, control API **6791** by default) — plays HLS/MPEG-TS; best-effort HDMI-CEC
 - **Apple TV** (`appletv/`) — tvOS client (same control API as Android; KSPlayer plays MPEG-TS, including MPEG-2; up to nine-pane multiview)
 
 Control plane: browser → TVMaestro server → Android TV or Apple TV client.  
 Media plane: the client pulls stream URLs directly from Channels (or APITuner).
 
-**Security note:** the control API is unauthenticated by default (trusted LAN). Do not expose port `6790` to the public internet. `client_auth_token` in config is reserved for a future auth gate and is not enforced yet. Auth tokens in API responses are redacted.
+**Security note:** the control API is unauthenticated by default (trusted LAN). Do not expose port `6790` to the public internet. `client_auth_token` in config is reserved for a future auth gate and is not a substitute for network isolation.
+
+Upgrading from 0.4.2 or earlier? The default TV control port is now `6791`; see the [port upgrade instructions](docs/TROUBLESHOOTING.md#device-offline-after-upgrading-to-043) before updating clients.
 
 ## Quick start (Docker)
 
@@ -102,38 +118,46 @@ scripts/build-all.sh
 | `scripts/build-android.sh` | `assembleDebug` APK |
 | `scripts/build-appletv.sh` | tvOS Simulator build (needs full Xcode) |
 
-**CI** (`.github/workflows/ci.yml`) runs on every push/PR: pytest, web build, Docker image, Android debug APK, and Apple TV simulator build (macOS runner). Artifacts: `web-dist`, `android-debug-apk`, `appletv-simulator-app`.
+**CI** (`.github/workflows/ci.yml`) runs on pushes to `main` and `dev`, and on pull requests: pytest, web build, Docker image, Android TV debug APK, Apple TV build, companion Android debug APK, and companion iOS Simulator build. Artifacts: `web-dist`, `android-debug-apk`, `appletv-app`, `companion-android-debug-apk`, `companion-ios-app`.
 
 ### Releases
 
-Tagged releases (`v*`) trigger `.github/workflows/release.yml`, which:
+Day-to-day work lands on `dev`. A push there runs CI and publishes `ghcr.io/matthewfkoch/tvmaestro:dev` plus an immutable `sha-<12-character commit>` tag. It does not move `:latest`.
 
-1. Runs the server tests, then publishes a multi-arch image (`linux/amd64` + `linux/arm64`) to GitHub Container Registry: `ghcr.io/matthewfkoch/tvmaestro:<version>` and `:latest`
-2. Builds the Android TV APK and attaches it to a [GitHub Release](https://github.com/matthewfkoch/TVMaestro/releases) on this repo
+Pushes to `dev` that change `appletv/` or `mobile/` upload the Apple TV app and the iOS companion to TestFlight. You can also run `.github/workflows/testflight.yml` by hand. Version tags do not upload another Apple binary. Local uploads with `scripts/testflight-appletv.sh` and `scripts/testflight-ios.sh` do not need the GitHub secrets. If `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, or `APPLE_TEAM_ID` is missing, the TestFlight jobs skip.
 
-The same tag triggers `.github/workflows/testflight.yml`, which uploads the Apple TV build to TestFlight when `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, and `APPLE_TEAM_ID` are set. If those secrets are missing, that job skips. A local upload with `scripts/testflight-appletv.sh` does not need them.
-
-A manual run of the Release workflow (no tag) publishes `:dev` only. Do not retag a version that already shipped.
-
-If the package is still private (the default when the repo started private), open **Packages → tvmaestro → Package settings**, link it to this repo, and set visibility to **Public** so `docker pull` works without a GitHub login. The repo itself also has to be public for people to download the APK from Releases.
-
-Bump these together, then tag:
-
-- `server/tvmaestro/__version__.py`
-- `web/package.json`
-- Android `versionName` and `versionCode` in `android/app/build.gradle.kts`
-- Apple TV `MARKETING_VERSION` in `appletv/TVMaestro.xcodeproj` (`Info.plist` reads `$(MARKETING_VERSION)` and `$(CURRENT_PROJECT_VERSION)`; Fastlane increments the build number on upload)
+When a TestFlight build is the one you want to ship, fast-forward `main` to that commit and tag it:
 
 ```bash
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-**Signing:** release APKs are signed with the repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. Do not generate a new keystore. Upgrades install over a previous TVMaestro release only when both APKs use this key. If those secrets are missing, the workflow attaches a debug APK (`tvmaestro-android-<version>-debug.apk`) instead.
+`.github/workflows/release.yml` then:
+
+1. Retags the existing `sha-<12-character commit>` image to `ghcr.io/matthewfkoch/tvmaestro:<version>` and `:latest` when that image exists. It builds from source only when the sha image was never published.
+2. Builds the Android TV APK and the companion Android APK, and attaches both to a [GitHub Release](https://github.com/matthewfkoch/TVMaestro/releases) on this repo
+
+A manual run of the Release workflow (no tag) publishes `:dev` and the sha tag only. Do not retag a version that already shipped.
+
+App Store review does not build a new binary. Run `.github/workflows/appstore.yml` with the marketing version and the processed TestFlight build number. Approval leaves the app unreleased unless you opt in, so you can publish `:latest` first when the app depends on a new server. The API key must be App Manager or Admin. The iOS companion is not submitted until `mobile/fastlane/metadata` exists. See [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
+
+If the package is still private (the default when the repo started private), open **Packages → tvmaestro → Package settings**, link it to this repo, and set visibility to **Public** so `docker pull` works from the public registry.
+
+Bump these together on `dev` before the TestFlight upload. Fastlane chooses the Apple build number from App Store Connect and does not commit it. `Info.plist` reads `$(MARKETING_VERSION)` and `$(CURRENT_PROJECT_VERSION)`.
+
+- `server/tvmaestro/__version__.py`
+- `web/package.json`
+- Android `versionName` and `versionCode` in `android/app/build.gradle.kts`
+- Apple TV `MARKETING_VERSION` in `appletv/TVMaestro.xcodeproj`
+- Companion `version` in `mobile/package.json`, `versionName` and `versionCode` in `mobile/android/app/build.gradle`, and `MARKETING_VERSION` in `mobile/ios/App/App.xcodeproj`
+- `CHANGELOG.md` and `appletv/fastlane/metadata/en-US/release_notes.txt`
+
+**Signing:** release APKs are signed with the repository secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. The same keystore signs the Android TV client and the companion. Do not generate a new keystore. Upgrades install over a previous release only when both APKs use this key. If those secrets are missing, the workflow attaches debug APKs (`tvmaestro-android-<version>-debug.apk` and `tvmaestro-companion-<version>-debug.apk`) instead.
 
 ### Apple TV client
 
-Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** and choose **Apple TV** with the LAN IP and port `9093`. Pair it once under **Edit device** (PIN on the Apple TV) so Tune and **Open** can wake the Apple TV and launch the app when it is not in front. The television turns on only if Control TVs and Receivers is enabled on the Apple TV. The app plays the original MPEG-TS stream from Channels DVR.
+Open `appletv/TVMaestro.xcodeproj` in Xcode (tvOS 17+), run on an Apple TV, then **+ Device** and choose **Apple TV** with the LAN IP and port `6791` (the default). Pair it once under **Edit device** (PIN on the Apple TV).
 
 ### TestFlight
 
@@ -145,7 +169,7 @@ scripts/testflight-appletv.sh
 
 One-time: create the tvOS app in App Store Connect and set `ascAppId` in `appletv/testflight.json`. Full steps, including a public link for other Apple TVs: `appletv/docs/TESTFLIGHT.md`.
 
-GitHub Actions upload is `.github/workflows/testflight.yml` and needs the API key secrets above. Local Apple ID upload does not. The upload places the build in App Store Connect; the public link is turned on there after processing.
+GitHub Actions upload is `.github/workflows/testflight.yml` on `dev` (when `appletv/` or `mobile/` changes) or when you run it by hand. It needs the API key secrets above. The same workflow uploads the iOS companion. Local Apple ID upload does not. The upload places the build in App Store Connect; the public link is turned on there after processing.
 
 ### Xcode direct install (development)
 
@@ -165,7 +189,7 @@ cd android && ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Open `android/` in Android Studio if you prefer the IDE. Then in the web UI **+ Device** with the device LAN IP and port `9093`.
+Open `android/` in Android Studio if you prefer the IDE. Then in the web UI **+ Device** with the device LAN IP and port `6791` (the default).
 
 Multiview max depends on the SoC: capable devices report up to 4 panes; many Amlogic/MediaTek sticks are clamped to 1.
 
@@ -185,6 +209,8 @@ Multiview max depends on the SoC: capable devices report up to 4 panes; many Aml
 | POST | `/api/devices/{id}/launch` | Open the TVMaestro app on a paired Apple TV |
 | GET/POST | `/api/sessions` | List / start single or multiview |
 | POST | `/api/sessions/{id}/stop` | Stop playback |
+| GET/POST | `/api/sessions/{id}/audio` | Read or move audio focus (`index`) without restarting streams |
+| POST | `/api/sessions/{id}/slot` | Replace one live pane (`index`, `channel_id`, or null to clear) |
 | POST | `/api/youtube/resolve` | Resolve YouTube URL via APITuner → MPEG-TS slot |
 | GET | `/api/apituner/status` | APITuner reachability |
 | GET | `/docs` | OpenAPI |
@@ -214,3 +240,15 @@ Set **APITuner base URL** in Settings. TVMaestro asks APITuner for a playable MP
 [MIT](LICENSE) © 2026 Matthew Koch.
 
 The Apple TV app links [KSPlayer](https://github.com/kingslay/KSPlayer) and [FFmpegKit](https://github.com/kingslay/FFmpegKit), GPL-3.0-only. See [NOTICE](NOTICE).
+
+## Contributing
+
+For development setup and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Security
+
+Please report security issues privately via the repository's [security advisory form](https://github.com/matthewfkoch/TVMaestro/security/advisories/new) or the maintainer's GitHub profile. See [SECURITY.md](SECURITY.md) for details.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes and project updates.

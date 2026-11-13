@@ -89,9 +89,18 @@ struct SlotPlayerView: View {
             Theme.bg
             if armed, let playURL {
                 KSVideoPlayer(coordinator: coordinator, url: playURL, options: options)
-                    .onStateChanged { _, state in
+                    .onStateChanged { layer, state in
                         if state == .error {
                             fail("Pane \(paneIndex + 1): playback failed")
+                        }
+                        Task { @MainActor in
+                            suppressCaptions(layer)
+                        }
+                    }
+                    .onPlay { _, _ in
+                        guard let layer = coordinator.playerLayer else { return }
+                        Task { @MainActor in
+                            suppressCaptions(layer)
                         }
                     }
                     .onFinish { _, error in
@@ -145,14 +154,25 @@ struct SlotPlayerView: View {
     }
 
     /// MPEG-2 (typical ATSC) has no VideoToolbox decoder on tvOS, so decode in software.
+    /// Field 2 of EIA-608 is often a repeating junk row. `subtitleDisable` alone still
+    /// lets KSPlayer paint it, so embedded captions are never selected.
     private static func makeOptions() -> KSOptions {
-        let options = KSOptions()
+        let options = PlaybackOptions()
         options.videoDecodeType = .software
         options.registerRemoteControll = false
         options.isAutoPlay = true
         options.subtitleDisable = true
+        options.autoSelectEmbedSubtitle = false
         options.preferredForwardBufferDuration = 1
         return options
+    }
+
+    @MainActor
+    private func suppressCaptions(_ layer: KSPlayerLayer) {
+        if layer.subtitleModel.selectedSubtitleInfo != nil {
+            layer.select(subtitleInfo: nil)
+        }
+        layer.subtitleView.isHidden = true
     }
 
     private func scheduleStart() {
@@ -195,5 +215,13 @@ struct SlotPlayerView: View {
             MPMediaItemPropertyTitle: slot.title ?? "TVMaestro",
             MPMediaItemPropertyArtist: "TVMaestro",
         ]
+    }
+}
+
+/// Never auto-pick an embedded caption track. Broadcast MPEG-TS often carries a
+/// second EIA-608 field whose whole row is repeating control characters.
+private final class PlaybackOptions: KSOptions {
+    override func wantedSubtitle(tracks: [any SubtitleInfo]) -> (any SubtitleInfo)? {
+        nil
     }
 }

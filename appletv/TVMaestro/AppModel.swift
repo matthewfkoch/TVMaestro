@@ -45,7 +45,7 @@ final class AppModel: ObservableObject {
 
     init() {
         let storedPort = defaults.object(forKey: Keys.port) as? Int
-        port = storedPort ?? 9093
+        port = storedPort ?? 6791
         authToken = defaults.string(forKey: Keys.token) ?? ""
         guideSeen = defaults.bool(forKey: Keys.guideSeen)
         guidePaired = defaults.bool(forKey: Keys.guidePaired)
@@ -266,6 +266,12 @@ final class AppModel: ObservableObject {
                 case .audio(let s):
                     self.session = s
                     self.showAudioHUD()
+                case .slot(let s):
+                    self.session = s
+                    let playable = s.slots.filter(\.isPlayable).count
+                    if playable > 0 {
+                        self.statusLine = "Playing \(playable) · \(s.layout)"
+                    }
                 case .stopped:
                     self.applySession(nil)
                 case .failed(let message):

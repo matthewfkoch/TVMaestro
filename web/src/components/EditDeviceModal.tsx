@@ -12,7 +12,7 @@ type Props = {
 export default function EditDeviceModal({ open, device, onClose, onSaved }: Props) {
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
-  const [port, setPort] = useState(9093);
+  const [port, setPort] = useState(6791);
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -162,7 +162,7 @@ export default function EditDeviceModal({ open, device, onClose, onSaved }: Prop
             <input
               type="number"
               value={port}
-              onChange={(e) => setPort(Number(e.target.value) || 9093)}
+              onChange={(e) => setPort(Number(e.target.value) || 6791)}
             />
           </div>
           <div className="field">

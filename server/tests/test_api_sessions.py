@@ -365,6 +365,140 @@ def test_refresh_audio_ignores_a_different_device_session(client: TestClient, re
     assert [slot["audio"] for slot in refreshed.json()["slots"]] == [True, False, False, False]
 
 
+def test_replace_slot_swaps_one_pane_without_repushing(
+    client: TestClient, registered_device, seeded_channels
+):
+    with (
+        patch("tvmaestro.client_proxy.replace_slot", new=AsyncMock(return_value={"success": True})) as replace,
+        patch("tvmaestro.client_proxy.push_session", new=AsyncMock(return_value={"success": True})) as push,
+    ):
+        created = _multiview(client, registered_device.id)
+        assert created.status_code == 200, created.text
+        session_id = created.json()["id"]
+        push.reset_mock()
+
+        swapped = client.post(
+            f"/api/sessions/{session_id}/slot",
+            json={"index": 3, "channel_id": "espn"},
+        )
+        assert swapped.status_code == 200, swapped.text
+        slots = swapped.json()["slots"]
+        assert slots[3]["url"] == "http://dvr.example/espn.ts"
+        assert slots[3]["title"] == "ESPN"
+        assert slots[3]["channel_id"] == "espn"
+        assert slots[0]["url"] == "http://dvr.example/a.ts"
+        assert slots[2]["url"] == "http://dvr.example/b.ts"
+        assert [slot["audio"] for slot in slots] == [True, False, False, False]
+        replace.assert_awaited_once()
+        assert replace.await_args.args[1] == 3
+        assert replace.await_args.args[2].url == "http://dvr.example/espn.ts"
+        assert replace.await_args.args[3] == 0
+        push.assert_not_awaited()
+
+        stored = client.get(f"/api/sessions/{session_id}")
+        assert stored.json()["slots"][3]["title"] == "ESPN"
+        assert stored.json()["id"] == session_id
+        assert stored.json()["layout"] == "2x2"
+
+
+def test_replace_slot_clear_moves_audio(client: TestClient, registered_device):
+    with patch("tvmaestro.client_proxy.replace_slot", new=AsyncMock(return_value={"success": True})) as replace:
+        created = _multiview(client, registered_device.id)
+        session_id = created.json()["id"]
+        cleared = client.post(
+            f"/api/sessions/{session_id}/slot",
+            json={"index": 0, "channel_id": None},
+        )
+        assert cleared.status_code == 200, cleared.text
+        slots = cleared.json()["slots"]
+        assert slots[0]["url"] is None
+        assert slots[2]["title"] == "Beta"
+        assert slots[3]["title"] == "Gamma"
+        assert [slot["audio"] for slot in slots] == [False, False, True, False]
+        assert replace.await_args.args[3] == 2
+
+
+def test_replace_slot_rejects_unknown_channel_bad_index_and_last_clear(
+    client: TestClient, registered_device, seeded_channels
+):
+    with patch("tvmaestro.client_proxy.replace_slot", new=AsyncMock(return_value={"success": True})) as replace:
+        created = _multiview(client, registered_device.id)
+        session_id = created.json()["id"]
+
+        unknown = client.post(
+            f"/api/sessions/{session_id}/slot",
+            json={"index": 2, "channel_id": "nope"},
+        )
+        assert unknown.status_code == 400
+        assert "Unknown channel_id" in unknown.json()["detail"]
+
+        missing = client.post(
+            f"/api/sessions/{session_id}/slot",
+            json={"index": 9, "channel_id": "espn"},
+        )
+        assert missing.status_code == 400
+        assert "index" in missing.json()["detail"]
+
+        solo = client.post(
+            "/api/sessions",
+            json={
+                "device_id": registered_device.id,
+                "mode": "multiview",
+                "layout": "2x2",
+                "slots": [
+                    {"url": "http://dvr.example/a.ts", "title": "Alpha", "audio": True},
+                    {},
+                    {},
+                    {},
+                ],
+            },
+        )
+        assert solo.status_code == 200, solo.text
+        last = client.post(
+            f"/api/sessions/{solo.json()['id']}/slot",
+            json={"index": 0, "channel_id": None},
+        )
+        assert last.status_code == 400
+        assert "keep playing" in last.json()["detail"]
+        replace.assert_not_awaited()
+
+        gone = client.post("/api/sessions/does-not-exist/slot", json={"index": 0, "channel_id": "espn"})
+        assert gone.status_code == 404
+
+
+def test_replace_slot_rejects_stopped_session(client: TestClient, registered_device, seeded_channels):
+    created = _multiview(client, registered_device.id)
+    session_id = created.json()["id"]
+    assert client.post(f"/api/sessions/{session_id}/stop").status_code == 200
+    with patch("tvmaestro.client_proxy.replace_slot", new=AsyncMock(return_value={"success": True})):
+        resp = client.post(
+            f"/api/sessions/{session_id}/slot",
+            json={"index": 2, "channel_id": "espn"},
+        )
+    assert resp.status_code == 400
+    assert "not playing" in resp.json()["detail"]
+
+
+def test_replace_slot_device_failure_keeps_previous_slots(
+    client: TestClient, registered_device, seeded_channels
+):
+    created = _multiview(client, registered_device.id)
+    session_id = created.json()["id"]
+    with patch(
+        "tvmaestro.client_proxy.replace_slot",
+        new=AsyncMock(side_effect=RuntimeError("device refused")),
+    ):
+        resp = client.post(
+            f"/api/sessions/{session_id}/slot",
+            json={"index": 3, "channel_id": "espn"},
+        )
+    assert resp.status_code == 502
+    assert "device refused" in resp.json()["detail"]
+    stored = client.get(f"/api/sessions/{session_id}")
+    assert stored.json()["slots"][3]["title"] == "Gamma"
+    assert stored.json()["slots"][3]["url"] == "http://dvr.example/c.ts"
+
+
 def test_refresh_audio_keeps_stored_focus_when_device_is_unreachable(client: TestClient, registered_device):
     created = _multiview(client, registered_device.id)
     session_id = created.json()["id"]

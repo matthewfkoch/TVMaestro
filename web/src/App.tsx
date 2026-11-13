@@ -297,6 +297,8 @@ export default function App() {
         devices={devices}
         selectedId={selectedDeviceId}
         sessionsByDevice={sessionsByDevice}
+        channels={channels}
+        programmes={programmes}
         onSelect={setSelectedDeviceId}
         onEdit={setEditDeviceId}
         onCec={(id, action) => void api.cec(id, action).catch((e: Error) => setLoadError(e.message))}
@@ -309,6 +311,11 @@ export default function App() {
         onRefreshAudio={(id) => api.refreshSessionAudio(id)}
         onSetAudio={async (id, index) => {
           const session = await api.setSessionAudio(id, index);
+          await reload();
+          return session;
+        }}
+        onReplaceSlot={async (id, index, channelId) => {
+          const session = await api.replaceSessionSlot(id, index, channelId);
           await reload();
           return session;
         }}

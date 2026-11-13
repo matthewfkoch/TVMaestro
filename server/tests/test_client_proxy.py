@@ -88,7 +88,7 @@ def test_guide_status_reports_saved_pairing(tmp_path, monkeypatch):
 
     monkeypatch.setattr(client_proxy.httpx, "AsyncClient", _Client)
     asyncio.run(client_proxy.notify_guide_link(device))
-    assert posted["url"] == "http://10.0.0.8:9093/api/guide"
+    assert posted["url"] == "http://10.0.0.8:6791/api/guide"
     assert posted["json"] == {
         "registered": True,
         "paired": True,

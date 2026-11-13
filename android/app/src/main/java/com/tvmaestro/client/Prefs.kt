@@ -9,7 +9,7 @@ object Prefs {
     private const val KEY_SERVER_URL = "server_url"
 
     fun port(context: Context): Int =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt(KEY_PORT, 9093)
+        context.getSharedPreferences(NAME, Context.MODE_PRIVATE).getInt(KEY_PORT, 6791)
 
     fun setPort(context: Context, port: Int) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit().putInt(KEY_PORT, port).apply()

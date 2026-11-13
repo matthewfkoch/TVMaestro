@@ -22,6 +22,7 @@ from .devices import DeviceRegistry
 from .guide import GuideStore
 from .models import (
     AudioFocusRequest,
+    SlotReplaceRequest,
     CecByHostRequest,
     CecRequest,
     ConfigUpdate,
@@ -377,6 +378,19 @@ async def refresh_session_audio(session_id: str):
     session = await _sessions().refresh_audio(session_id)
     if not session:
         raise HTTPException(404, "Session not found")
+    return session
+
+
+@app.post("/api/sessions/{session_id}/slot")
+async def replace_session_slot(session_id: str, body: SlotReplaceRequest):
+    try:
+        session = await _sessions().replace_slot(session_id, body.index, body.channel_id)
+    except KeyError:
+        raise HTTPException(404, "Session not found") from None
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(502, str(exc)) from exc
     return session
 
 

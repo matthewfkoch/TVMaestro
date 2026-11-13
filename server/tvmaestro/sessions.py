@@ -209,6 +209,48 @@ class SessionManager:
         await client_proxy.set_audio(device, index)
         return self._store_audio(session, index)
 
+    async def replace_slot(
+        self,
+        session_id: str,
+        index: int,
+        channel_id: Optional[str],
+    ) -> SessionState:
+        """Swap one pane's video. Other slots keep their streams."""
+        session = self._sessions.get(session_id)
+        if not session:
+            raise KeyError(session_id)
+        if session.status != "playing":
+            raise ValueError("Session is not playing")
+        capacity = LAYOUT_CAPACITY.get(session.layout, 1)
+        if index < 0 or index >= capacity:
+            raise ValueError("No slot at that index")
+        device = self.devices.get(session.device_id)
+        if not device:
+            raise ValueError("Unknown device")
+
+        slots = list(session.slots)
+        while len(slots) < capacity:
+            slots.append(SessionSlot())
+
+        channel_id = (channel_id or "").strip() or None
+        if channel_id:
+            incoming = SessionSlot(channel_id=channel_id, audio=slots[index].audio)
+            slots[index] = await self._resolve_slot(incoming)
+        else:
+            slots[index] = SessionSlot()
+
+        if not any(_slot_playable(s) for s in slots):
+            raise ValueError("At least one stream must keep playing")
+        slots = _with_single_audio(slots)
+        audio_index = next(
+            (i for i, slot in enumerate(slots) if slot.audio and _slot_playable(slot)),
+            None,
+        )
+        await client_proxy.replace_slot(device, index, slots[index], audio_index)
+        updated = session.model_copy(update={"slots": slots, "updated_at": time.time()})
+        self._sessions[session.id] = updated
+        return updated
+
     def _store_audio(self, session: SessionState, index: int) -> SessionState:
         slots = [
             slot.model_copy(update={"audio": i == index and _slot_playable(slot)})

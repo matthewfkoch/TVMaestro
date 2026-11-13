@@ -396,14 +396,20 @@ button {
   box-shadow: 0 0 10px rgba(62, 207, 142, 0.7);
 }
 
-.device-cec {
+.controls-picker {
   display: flex;
-  gap: 0.25rem;
-  margin-left: 0.25rem;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
-.device-cec .btn {
-  min-height: 28px;
+.controls-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.controls-row .btn {
+  flex: 1;
+  min-height: 32px;
   padding: 0 0.5rem;
   font-size: 0.75rem;
 }
@@ -464,6 +470,19 @@ button {
   color: var(--warn, #ff5c5c);
   font-size: 0.72rem;
   white-space: normal;
+}
+
+.change-picker .channel-picker-menu {
+  margin-top: 0.45rem;
+}
+
+.change-picker .channel-picker-list {
+  max-height: 220px;
+}
+
+.change-picker-clear {
+  width: 100%;
+  margin-top: 0.4rem;
 }
 
 .sheet-backdrop {
@@ -896,13 +915,5 @@ button {
 
   .topbar-actions .btn {
     padding: 0 0.6rem;
-  }
-
-  .device-cec {
-    display: none;
-  }
-
-  .device-chip.selected .device-cec {
-    display: flex;
   }
 }
