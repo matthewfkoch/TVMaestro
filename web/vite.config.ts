@@ -10,6 +10,8 @@ export default defineConfig({
     },
   },
   build: {
+    // Preserve the browser support of the Vite 6 production build.
+    target: ["es2020", "edge88", "firefox78", "chrome87", "safari14"],
     outDir: "dist",
     emptyOutDir: true,
   },
