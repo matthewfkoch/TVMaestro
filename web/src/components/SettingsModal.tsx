@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, REDACTED_SECRET, type AppConfig } from "../api";
+import { isSampleMode } from "../sampleData";
 
 type Props = {
   open: boolean;
@@ -8,10 +9,13 @@ type Props = {
 };
 
 export default function SettingsModal({ open, onClose, onSaved }: Props) {
+  const sample = isSampleMode();
   const [cfg, setCfg] = useState<AppConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [tunerStatus, setTunerStatus] = useState<string | null>(null);
+  const companion =
+    typeof navigator !== "undefined" && navigator.userAgent.includes("TVMaestroCompanion");
 
   useEffect(() => {
     if (!open) return;
@@ -32,7 +36,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
   if (!open) return null;
 
   async function save() {
-    if (!cfg) return;
+    if (!cfg || sample) return;
     setSaving(true);
     setError(null);
     try {
@@ -51,6 +55,11 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
     <div className="modal-center">
       <div className="modal">
         <h2>Settings</h2>
+        {sample && (
+          <p style={{ margin: "0 0 0.75rem", color: "var(--text-dim)", fontSize: "0.9rem" }}>
+            Sample guide. Settings stay local to this preview. The phone does not play video.
+          </p>
+        )}
         {!cfg && !error && <p>Loading…</p>}
         {cfg && (
           <div style={{ display: "grid", gap: "0.75rem" }}>
@@ -59,6 +68,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
               <input
                 value={cfg.channels_dvr_m3u_url}
                 placeholder="http://channels-dvr.local:8089/devices/ANY/channels.m3u?format=ts&codec=copy"
+                disabled={sample}
                 onChange={(e) => setCfg({ ...cfg, channels_dvr_m3u_url: e.target.value })}
               />
             </div>
@@ -118,7 +128,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
           </div>
         )}
         {error && <div className="error" style={{ marginTop: "0.75rem" }}>{error}</div>}
-        {typeof navigator !== "undefined" && navigator.userAgent.includes("TVMaestroCompanion") && (
+        {companion && (
           <div className="companion-server">
             <span>This device</span>
             <button
@@ -136,7 +146,12 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
           <button type="button" className="btn" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="btn btn-primary" disabled={!cfg || saving} onClick={save}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!cfg || saving || sample}
+            onClick={save}
+          >
             {saving ? "Saving…" : "Save & refresh"}
           </button>
         </div>

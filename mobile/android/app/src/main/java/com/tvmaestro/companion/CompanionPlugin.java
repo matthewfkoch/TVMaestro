@@ -44,15 +44,13 @@ public class CompanionPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void load(PluginCall call) {
-        String url = call.getString("url");
-        if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) {
-            call.reject("A valid http(s) server URL is required");
-            return;
-        }
+    public void openGuide(PluginCall call) {
+        boolean sample = Boolean.TRUE.equals(call.getBoolean("sample", false));
         WebView webView = getBridge().getWebView();
-        webView.post(() -> webView.loadUrl(url));
-        call.resolve();
+        webView.post(() -> {
+            showGuide(sample);
+            call.resolve();
+        });
     }
 
     @Override
@@ -65,10 +63,48 @@ public class CompanionPlugin extends Plugin {
             showConnectForm();
             return true;
         }
-        if ("http".equals(scheme) || "https".equals(scheme)) {
+        if (isLocalAppUrl(url)) {
             return false;
         }
-        return null;
+        // Keep the WebView on the bundled UI. API calls use fetch, not navigation.
+        return true;
+    }
+
+    private boolean isLocalAppUrl(Uri url) {
+        Uri local = Uri.parse(getBridge().getLocalUrl());
+        String localHost = local.getHost();
+        String urlHost = url.getHost();
+        String localScheme = local.getScheme();
+        String urlScheme = url.getScheme();
+        if (localScheme != null && urlScheme != null && !localScheme.equalsIgnoreCase(urlScheme)) {
+            if (!("http".equalsIgnoreCase(urlScheme) || "https".equalsIgnoreCase(urlScheme)
+                    || "capacitor".equalsIgnoreCase(urlScheme) || "ionic".equalsIgnoreCase(urlScheme))) {
+                return false;
+            }
+        }
+        if (localHost != null && urlHost != null && localHost.equalsIgnoreCase(urlHost)) {
+            return true;
+        }
+        if (urlHost != null) {
+            String host = urlHost.toLowerCase();
+            if ("localhost".equals(host) || "127.0.0.1".equals(host)) {
+                return "http".equalsIgnoreCase(urlScheme)
+                        || "https".equalsIgnoreCase(urlScheme)
+                        || "capacitor".equalsIgnoreCase(urlScheme)
+                        || "ionic".equalsIgnoreCase(urlScheme);
+            }
+        }
+        return false;
+    }
+
+    private void showGuide(boolean sample) {
+        String local = getBridge().getLocalUrl();
+        if (local.endsWith("/")) {
+            local = local.substring(0, local.length() - 1);
+        }
+        String target = sample ? local + "/guide/index.html?sample=1" : local + "/guide/index.html";
+        WebView webView = getBridge().getWebView();
+        webView.post(() -> webView.loadUrl(target));
     }
 
     private void showConnectForm() {

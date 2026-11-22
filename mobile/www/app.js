@@ -1,9 +1,11 @@
 const DEFAULT_PORT = "6790";
+const API_ORIGIN_KEY = "tvmaestroApiOrigin";
 
 const form = document.getElementById("form");
 const hostInput = document.getElementById("host");
 const portInput = document.getElementById("port");
 const submitButton = document.getElementById("submit");
+const sampleButton = document.getElementById("sample");
 const message = document.getElementById("message");
 
 function setMessage(text, pending) {
@@ -36,6 +38,22 @@ function cleanAddress(value) {
     .trim();
 }
 
+function isLocalHostname(hostname) {
+  const host = String(hostname || "")
+    .replace(/^\[|\]$/g, "")
+    .toLowerCase();
+  if (!host) return false;
+  if (host === "localhost" || host === "::1" || host.endsWith(".local")) return true;
+  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^fc[0-9a-f]{2}:/i.test(host) || /^fd[0-9a-f]{2}:/i.test(host) || /^fe80:/i.test(host)) {
+    return true;
+  }
+  return false;
+}
+
 function parseServer(rawHost, rawPort) {
   let input = cleanAddress(rawHost);
   const typedPort = cleanAddress(rawPort);
@@ -63,6 +81,10 @@ function parseServer(rawHost, rawPort) {
   }
   if (!/^\d+$/.test(port) || Number(port) < 1 || Number(port) > 65535) {
     throw new Error("Port must be between 1 and 65535.");
+  }
+  const local = isLocalHostname(url.hostname);
+  if (url.protocol === "http:" && !local) {
+    throw new Error("Use https for addresses outside your local network.");
   }
   const hostname = url.hostname.includes(":") ? `[${url.hostname}]` : url.hostname;
   const scheme = url.protocol.slice(0, -1);
@@ -107,16 +129,28 @@ async function probe(origin) {
   }
 }
 
-async function connect(server) {
+async function openGuide(options) {
   const { Companion } = plugins();
+  if (options.sample) {
+    sessionStorage.removeItem(API_ORIGIN_KEY);
+  } else {
+    sessionStorage.setItem(API_ORIGIN_KEY, options.origin);
+  }
+  await Companion.openGuide({ sample: Boolean(options.sample) });
+}
+
+async function connect(server) {
   setMessage(`Connecting to ${server.origin}…`, true);
   submitButton.disabled = true;
+  sampleButton.disabled = true;
   try {
     await probe(server.origin);
+    const { Companion } = plugins();
     await Companion.setServer({ host: server.host, port: server.port, scheme: server.scheme });
-    await Companion.load({ url: `${server.origin}/` });
+    await openGuide({ sample: false, origin: server.origin });
   } catch (error) {
     submitButton.disabled = false;
+    sampleButton.disabled = false;
     setMessage(error instanceof Error ? error.message : "Could not reach the server.");
   }
 }
@@ -131,6 +165,17 @@ form.addEventListener("submit", (event) => {
     return;
   }
   void connect(server);
+});
+
+sampleButton.addEventListener("click", () => {
+  setMessage("Opening sample guide…", true);
+  submitButton.disabled = true;
+  sampleButton.disabled = true;
+  void openGuide({ sample: true }).catch((error) => {
+    submitButton.disabled = false;
+    sampleButton.disabled = false;
+    setMessage(error instanceof Error ? error.message : "Could not open the sample guide.");
+  });
 });
 
 async function restore() {

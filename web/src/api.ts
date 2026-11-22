@@ -1,3 +1,13 @@
+import {
+  SAMPLE_CHANNELS,
+  SAMPLE_CONFIG,
+  SAMPLE_DEVICES,
+  SAMPLE_SESSIONS,
+  isSampleMode,
+  sampleProgrammes,
+  sampleStatus,
+} from "./sampleData";
+
 export type Channel = {
   id: string;
   number?: string | null;
@@ -93,8 +103,19 @@ export type Status = {
   now: number;
 };
 
+function apiOrigin(): string {
+  if (typeof window === "undefined") return "";
+  return window.__TVMAESTRO_API_ORIGIN__ || "";
+}
+
+function sampleUnavailable(): never {
+  throw new Error(
+    "This is a sample guide. Connect to your TVMaestro server to control a television. The phone does not play video.",
+  );
+}
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(`${apiOrigin()}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -116,24 +137,38 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  status: () => req<Status>("/api/status"),
-  channels: () => req<Channel[]>("/api/channels"),
+  status: () => (isSampleMode() ? Promise.resolve(sampleStatus()) : req<Status>("/api/status")),
+  channels: () =>
+    isSampleMode() ? Promise.resolve(SAMPLE_CHANNELS) : req<Channel[]>("/api/channels"),
   epg: (from: number, to: number) =>
-    req<Programme[]>(`/api/epg?from=${from}&to=${to}`),
-  devices: () => req<Device[]>("/api/devices"),
+    isSampleMode()
+      ? Promise.resolve(sampleProgrammes(from, to))
+      : req<Programme[]>(`/api/epg?from=${from}&to=${to}`),
+  devices: () =>
+    isSampleMode() ? Promise.resolve(SAMPLE_DEVICES) : req<Device[]>("/api/devices"),
   createDevice: (body: {
     name: string;
     host: string;
     port?: number;
     token?: string;
     platform?: "android" | "tvos";
-  }) => req<Device>("/api/devices", { method: "POST", body: JSON.stringify(body) }),
+  }) =>
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<Device>("/api/devices", { method: "POST", body: JSON.stringify(body) }),
   updateDevice: (
     id: string,
     body: { name?: string; host?: string; port?: number; token?: string },
-  ) => req<Device>(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-  deleteDevice: (id: string) => req<{ ok: boolean }>(`/api/devices/${id}`, { method: "DELETE" }),
+  ) =>
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<Device>(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteDevice: (id: string) =>
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<{ ok: boolean }>(`/api/devices/${id}`, { method: "DELETE" }),
   cec: async (id: string, action: string) => {
+    if (isSampleMode()) sampleUnavailable();
     const body = await req<{ success?: boolean; message?: string }>(
       `/api/devices/${id}/cec`,
       { method: "POST", body: JSON.stringify({ action }) },
@@ -144,56 +179,92 @@ export const api = {
     return body;
   },
   pairStatus: (id: string) =>
-    req<{ requires_pairing: boolean; paired: boolean; has_certs: boolean; method: string }>(
-      `/api/devices/${id}/pair/status`,
-    ),
+    isSampleMode()
+      ? Promise.resolve({
+          requires_pairing: false,
+          paired: true,
+          has_certs: false,
+          method: "none",
+        })
+      : req<{ requires_pairing: boolean; paired: boolean; has_certs: boolean; method: string }>(
+          `/api/devices/${id}/pair/status`,
+        ),
   pairStart: (id: string) =>
-    req<{ ok: boolean; message?: string }>(`/api/devices/${id}/pair/start`, {
-      method: "POST",
-      body: "{}",
-    }),
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<{ ok: boolean; message?: string }>(`/api/devices/${id}/pair/start`, {
+          method: "POST",
+          body: "{}",
+        }),
   pairFinish: (id: string, pin: string) =>
-    req<{ ok: boolean; paired: boolean }>(`/api/devices/${id}/pair/finish`, {
-      method: "POST",
-      body: JSON.stringify({ pin }),
-    }),
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<{ ok: boolean; paired: boolean }>(`/api/devices/${id}/pair/finish`, {
+          method: "POST",
+          body: JSON.stringify({ pin }),
+        }),
   launch: (id: string) =>
-    req<{ ok: boolean; online: boolean }>(`/api/devices/${id}/launch`, {
-      method: "POST",
-      body: "{}",
-    }),
-  sessions: () => req<Session[]>("/api/sessions"),
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<{ ok: boolean; online: boolean }>(`/api/devices/${id}/launch`, {
+          method: "POST",
+          body: "{}",
+        }),
+  sessions: () =>
+    isSampleMode() ? Promise.resolve(SAMPLE_SESSIONS) : req<Session[]>("/api/sessions"),
   createSession: (body: {
     device_id: string;
     mode: "single" | "multiview";
     layout: string;
     slots: SessionSlot[];
-  }) => req<Session>("/api/sessions", { method: "POST", body: JSON.stringify(body) }),
+  }) =>
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<Session>("/api/sessions", { method: "POST", body: JSON.stringify(body) }),
   stopSession: (id: string) =>
-    req<Session>(`/api/sessions/${id}/stop`, { method: "POST", body: "{}" }),
-  refreshSessionAudio: (id: string) => req<Session>(`/api/sessions/${id}/audio`),
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<Session>(`/api/sessions/${id}/stop`, { method: "POST", body: "{}" }),
+  refreshSessionAudio: (id: string) =>
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<Session>(`/api/sessions/${id}/audio`),
   setSessionAudio: (id: string, index: number) =>
-    req<Session>(`/api/sessions/${id}/audio`, {
-      method: "POST",
-      body: JSON.stringify({ index }),
-    }),
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<Session>(`/api/sessions/${id}/audio`, {
+          method: "POST",
+          body: JSON.stringify({ index }),
+        }),
   replaceSessionSlot: (id: string, index: number, channelId: string | null) =>
-    req<Session>(`/api/sessions/${id}/slot`, {
-      method: "POST",
-      body: JSON.stringify({ index, channel_id: channelId }),
-    }),
-  config: () => req<AppConfig>("/api/config"),
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<Session>(`/api/sessions/${id}/slot`, {
+          method: "POST",
+          body: JSON.stringify({ index, channel_id: channelId }),
+        }),
+  config: () =>
+    isSampleMode() ? Promise.resolve({ ...SAMPLE_CONFIG }) : req<AppConfig>("/api/config"),
   saveConfig: (body: Partial<AppConfig>) =>
-    req<AppConfig>("/api/config", { method: "PUT", body: JSON.stringify(body) }),
-  refresh: () => req("/api/refresh", { method: "POST" }),
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<AppConfig>("/api/config", { method: "PUT", body: JSON.stringify(body) }),
+  refresh: () =>
+    isSampleMode()
+      ? Promise.resolve(undefined)
+      : req("/api/refresh", { method: "POST" }),
   resolveYoutube: (youtube_url: string, title?: string) =>
-    req<SessionSlot>("/api/youtube/resolve", {
-      method: "POST",
-      body: JSON.stringify({ youtube_url, title }),
-    }),
-  apitunerStatus: () => req<{ enabled: boolean; error?: string }>("/api/apituner/status"),
+    isSampleMode()
+      ? sampleUnavailable()
+      : req<SessionSlot>("/api/youtube/resolve", {
+          method: "POST",
+          body: JSON.stringify({ youtube_url, title }),
+        }),
+  apitunerStatus: (): Promise<{ enabled: boolean; error?: string }> =>
+    isSampleMode()
+      ? Promise.resolve({ enabled: false })
+      : req<{ enabled: boolean; error?: string }>("/api/apituner/status"),
 };
 
 /** Placeholder returned when the server redacts a stored secret. */
 export const REDACTED_SECRET = "••••••••";
-

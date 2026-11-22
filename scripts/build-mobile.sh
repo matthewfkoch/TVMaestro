@@ -105,6 +105,7 @@ if [[ ! -f android/local.properties ]]; then
   printf 'sdk.dir=%s\n' "$SDK_DIR" > android/local.properties
 fi
 
+"$ROOT/scripts/bundle-companion-guide.sh"
 npm install
 npx cap sync
 

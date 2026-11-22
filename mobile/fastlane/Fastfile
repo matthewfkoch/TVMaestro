@@ -13,6 +13,12 @@ platform :ios do
   desc "Register the iOS bundle ID and App Store Connect app"
   lane :setup do
     cfg = testflight_config
+    asc = cfg["ascAppId"].to_s
+    if !asc.empty? && !asc.include?("REPLACE")
+      UI.success("App Store Connect app already registered (#{asc}); skipping create")
+      next
+    end
+
     creds = upload_credentials_hash
     UI.user_error!("The App Store Connect API key is required to register the iOS app") unless creds[:api_key]
     Spaceship::ConnectAPI.token ||= Spaceship::ConnectAPI::Token.create(**creds[:api_key])
@@ -56,6 +62,108 @@ platform :ios do
 
   desc "Build Release and upload to TestFlight"
   lane :beta do
+    build_release_ipa
+    upload_testflight_build
+  end
+
+  desc "Upload iOS App Store listing only (no binary, no review submission)"
+  lane :metadata do
+    cfg = testflight_config
+    version = get_version_number(
+      xcodeproj: "ios/App/App.xcodeproj",
+      target: "App"
+    )
+
+    upload_args = upload_credentials_hash.merge(
+      app_identifier: cfg["bundleId"] || "com.tvmaestro.companion",
+      app_version: version,
+      platform: "ios",
+      team_id: resolve_team_id,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      force: true,
+      run_precheck_before_submit: false,
+      metadata_path: "fastlane/metadata",
+      app_rating_config_path: "fastlane/metadata/rating_config.json"
+    )
+
+    upload_to_app_store(**upload_args)
+  end
+
+  desc "Upload iOS screenshots only"
+  lane :screenshots do
+    cfg = testflight_config
+    version = get_version_number(
+      xcodeproj: "ios/App/App.xcodeproj",
+      target: "App"
+    )
+
+    upload_args = upload_credentials_hash.merge(
+      app_identifier: cfg["bundleId"] || "com.tvmaestro.companion",
+      app_version: version,
+      platform: "ios",
+      team_id: resolve_team_id,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      overwrite_screenshots: true,
+      submit_for_review: false,
+      force: true,
+      run_precheck_before_submit: false
+    )
+
+    upload_to_app_store(**upload_args)
+  end
+
+  desc "Submit an existing iOS TestFlight build for App Store review"
+  lane :submit do
+    unless Dir.exist?(File.expand_path("metadata", __dir__))
+      UI.user_error!(
+        "The iOS companion has no App Store listing metadata yet. Add mobile/fastlane/metadata before submitting it for review."
+      )
+    end
+
+    cfg = testflight_config
+    project = "ios/App/App.xcodeproj"
+    version = submit_version(project, "App")
+    build_number = required_build_number
+    app_identifier = cfg["bundleId"] || "com.tvmaestro.companion"
+
+    ensure_build_processed(
+      app_identifier: app_identifier,
+      marketing_version: version,
+      build_number: build_number,
+      platform: "IOS"
+    )
+
+    upload_args = upload_credentials_hash.merge(
+      app_identifier: app_identifier,
+      app_version: version,
+      build_number: build_number,
+      platform: "ios",
+      team_id: resolve_team_id,
+      skip_binary_upload: true,
+      skip_metadata: false,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      submit_for_review: true,
+      automatic_release: automatic_release?,
+      force: true,
+      run_precheck_before_submit: false,
+      precheck_include_in_app_purchases: false,
+      metadata_path: "fastlane/metadata",
+      app_rating_config_path: "fastlane/metadata/rating_config.json",
+      submission_information: {
+        export_compliance_uses_encryption: false,
+        content_rights_contains_third_party_content: false,
+        add_id_info_uses_idfa: false
+      }
+    )
+
+    upload_to_app_store(**upload_args)
+  end
+
+  private_lane :build_release_ipa do
     cfg = testflight_config
     team_id = resolve_team_id
     project = "ios/App/App.xcodeproj"
@@ -91,7 +199,10 @@ platform :ios do
         uploadSymbols: true
       }
     )
+  end
 
+  private_lane :upload_testflight_build do
+    cfg = testflight_config
     upload_args = upload_credentials_hash.merge(
       app_identifier: cfg["bundleId"] || "com.tvmaestro.companion",
       skip_waiting_for_build_processing: true,
@@ -103,51 +214,6 @@ platform :ios do
     upload_args[:apple_id] = asc if !asc.empty? && !asc.include?("REPLACE")
 
     upload_to_testflight(**upload_args)
-  end
-
-  desc "Submit an existing iOS TestFlight build for App Store review"
-  lane :submit do
-    unless Dir.exist?(File.expand_path("metadata", __dir__))
-      UI.user_error!(
-        "The iOS companion has no App Store listing metadata yet. Add mobile/fastlane/metadata before submitting it for review."
-      )
-    end
-
-    cfg = testflight_config
-    project = "ios/App/App.xcodeproj"
-    version = submit_version(project, "App")
-    build_number = required_build_number
-    app_identifier = cfg["bundleId"] || "com.tvmaestro.companion"
-
-    ensure_build_processed(
-      app_identifier: app_identifier,
-      marketing_version: version,
-      build_number: build_number,
-      platform: "IOS"
-    )
-
-    upload_args = upload_credentials_hash.merge(
-      app_identifier: app_identifier,
-      app_version: version,
-      build_number: build_number,
-      platform: "ios",
-      team_id: resolve_team_id,
-      skip_binary_upload: true,
-      skip_metadata: true,
-      skip_screenshots: true,
-      submit_for_review: true,
-      automatic_release: automatic_release?,
-      force: true,
-      run_precheck_before_submit: false,
-      precheck_include_in_app_purchases: false,
-      submission_information: {
-        export_compliance_uses_encryption: false,
-        content_rights_contains_third_party_content: false,
-        add_id_info_uses_idfa: false
-      }
-    )
-
-    upload_to_app_store(**upload_args)
   end
 
   def signing_xcargs(team_id)

@@ -136,7 +136,9 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: |
+            mobile/package-lock.json
+            web/package-lock.json
       - name: Set up Android SDK
         run: |
           ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
@@ -156,9 +158,11 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null
           "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0"
           test -d "${ANDROID_HOME}/platforms/android-36"
-      - name: Sync web assets
-        working-directory: mobile
+      - name: Bundle guide and sync assets
         run: |
+          chmod +x scripts/bundle-companion-guide.sh
+          scripts/bundle-companion-guide.sh
+          cd mobile
           npm ci
           npx cap sync android
       - name: Assemble debug
@@ -186,10 +190,14 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
-      - name: Sync web assets
-        working-directory: mobile
+          cache-dependency-path: |
+            mobile/package-lock.json
+            web/package-lock.json
+      - name: Bundle guide and sync assets
         run: |
+          chmod +x scripts/bundle-companion-guide.sh
+          scripts/bundle-companion-guide.sh
+          cd mobile
           npm ci
           npx cap sync ios
       - name: Fetch Capacitor frameworks

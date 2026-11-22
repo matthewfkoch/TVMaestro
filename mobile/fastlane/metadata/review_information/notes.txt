@@ -1,0 +1,9 @@
+There is no account.
+
+On the first screen, tap View sample guide. That opens a bundled sample channel guide with no network connection. Settings → Change server returns to the connect screen.
+
+The phone and tablet do not play video. Playback stays on a paired television when the user connects to their own TVMaestro server on the home network.
+
+The app ships the guide UI in the binary. It does not load remote web pages into the WebView. After Connect, it only calls the saved server’s API. Cleartext HTTP is limited to local-network addresses.
+
+The app stores only the server host, port, and scheme on the device. It does not collect personal data.

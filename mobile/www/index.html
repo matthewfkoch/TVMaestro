@@ -16,7 +16,7 @@
         <p>A running TVMaestro server is required. Enter its address below; this app opens the guide and controls provided by that server.</p>
         <p>You can browse the program guide, choose a television, tune channels, and manage multiview and playback controls supported by that television. Playback happens on the television, not on this phone or tablet.</p>
         <p>Channels and guide data come from sources you configure on your server. No channels, subscriptions, or video content are included with this app.</p>
-        <p>To connect to a different server, use Settings → Change server in the guide.</p>
+        <p>To connect to a different server, use Settings → Change server in the guide. Or open View sample guide to try the UI without a server.</p>
       </details>
       <form id="form">
         <label for="host">Server address</label>
@@ -35,6 +35,7 @@
         <label for="port">Port</label>
         <input id="port" name="port" type="text" inputmode="numeric" autocomplete="off" value="6790" />
         <button id="submit" type="submit">Connect</button>
+        <button id="sample" type="button" class="secondary">View sample guide</button>
         <p id="message" role="status"></p>
       </form>
     </main>

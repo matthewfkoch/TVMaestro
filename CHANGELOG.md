@@ -9,6 +9,7 @@
 
 ## 0.4.2
 
+- Ship the companion guide inside the iOS/Android app binary, with a View sample guide path for App Review and local-only WebView navigation.
 - Change one live multiview pane from the guide without restarting the other streams. The server, web guide, Android TV, and Apple TV all speak the same slot-replace call.
 - Publish the phone companion with this release: a signed Android APK on the GitHub Release, and an iOS build on TestFlight.
 - The companion connect screen ignores invisible characters the iOS keyboard inserts into the server address.

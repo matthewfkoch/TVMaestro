@@ -19,10 +19,12 @@ import MultiviewComposer, {
 import SettingsModal from "./components/SettingsModal";
 import TuneSheet from "./components/TuneSheet";
 import YoutubeModal from "./components/YoutubeModal";
+import { isSampleMode } from "./sampleData";
 
 type TuneTarget = { channel: Channel; programme?: Programme | null };
 
 export default function App() {
+  const sample = isSampleMode();
   const [status, setStatus] = useState<Status | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
@@ -185,45 +187,66 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="brand">
-          <Logo className="brand-mark" />
-        </div>
-        <div className="topbar-actions">
-          {status?.last_error && (
-            <span className="pill status-pill warn">
-              sync error
-            </span>
-          )}
-          <button
-            type="button"
-            className="btn"
-            disabled={!selectedSupportsMultiview}
-            title={
-              selectedSupportsMultiview
-                ? "Multiview"
-                : selectedDevice?.capabilities?.chip_note ||
-                  "Selected device does not support multiview"
-            }
-            onClick={() => {
-              setMvSlots([null, null, null, null]);
-              setMultiviewOpen(true);
-            }}
-          >
-            Multiview
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => void api.refresh().then(reload).catch((e: Error) => setLoadError(e.message))}
-          >
-            Refresh
-          </button>
-          <button type="button" className="btn" onClick={() => setSettingsOpen(true)}>
-            Settings
-          </button>
-        </div>
-      </header>
+      <div className="app-chrome">
+        {sample && (
+          <div className="sample-banner" role="status">
+            Sample guide for review. The phone does not play video. Connect to your own server to
+            control a television on the home network.
+          </div>
+        )}
+        <header className="topbar">
+          <div className="brand">
+            <Logo className="brand-mark" />
+          </div>
+          <div className="topbar-actions">
+            {status?.last_error && (
+              <span className="pill status-pill warn">sync error</span>
+            )}
+            {!sample && status && !status.last_error && (
+              <span className="pill status-pill">
+                {status.channels} ch · {status.programmes.toLocaleString()} airings
+              </span>
+            )}
+            {sample && status && (
+              <span className="pill status-pill">
+                {status.channels} ch · {status.programmes.toLocaleString()} airings
+              </span>
+            )}
+            <button
+              type="button"
+              className="btn"
+              disabled={!selectedSupportsMultiview || sample}
+              title={
+                sample
+                  ? "Sample mode does not start playback"
+                  : selectedSupportsMultiview
+                    ? "Multiview"
+                    : selectedDevice?.capabilities?.chip_note ||
+                      "Selected device does not support multiview"
+              }
+              onClick={() => {
+                setMvSlots([null, null, null, null]);
+                setMultiviewOpen(true);
+              }}
+            >
+              Multiview
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={sample}
+              onClick={() =>
+                void api.refresh().then(reload).catch((e: Error) => setLoadError(e.message))
+              }
+            >
+              Refresh
+            </button>
+            <button type="button" className="btn" onClick={() => setSettingsOpen(true)}>
+              Settings
+            </button>
+          </div>
+        </header>
+      </div>
 
       <main className="main">
         {loadError && (
