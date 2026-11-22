@@ -147,6 +147,7 @@ platform :ios do
       skip_screenshots: false,
       overwrite_screenshots: true,
       submit_for_review: true,
+      reject_if_possible: true,
       automatic_release: automatic_release?,
       force: true,
       run_precheck_before_submit: false,
