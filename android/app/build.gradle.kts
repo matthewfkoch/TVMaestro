@@ -10,8 +10,8 @@ android {
         applicationId = "com.tvmaestro.client"
         minSdk = 24
         targetSdk = 34
-        versionCode = 14
-        versionName = "0.4.4"
+        versionCode = 15
+        versionName = "0.4.6"
     }
 
     signingConfigs {

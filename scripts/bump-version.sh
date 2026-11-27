@@ -33,9 +33,21 @@ def bump_json(rel: str) -> None:
     data["version"] = ver
     p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
+def bump_lock(rel: str) -> None:
+    p = root / rel
+    if not p.is_file():
+        return
+    data = json.loads(p.read_text(encoding="utf-8"))
+    data["version"] = ver
+    if isinstance(data.get("packages"), dict) and "" in data["packages"]:
+        data["packages"][""]["version"] = ver
+    p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
 sub_file("server/tvmaestro/__version__.py", r'__version__\s*=\s*"[^"]+"', f'__version__ = "{ver}"')
 bump_json("web/package.json")
+bump_lock("web/package-lock.json")
 bump_json("mobile/package.json")
+bump_lock("mobile/package-lock.json")
 
 sub_file("android/app/build.gradle.kts", r'versionName\s*=\s*"[^"]+"', f'versionName = "{ver}"')
 sub_file(

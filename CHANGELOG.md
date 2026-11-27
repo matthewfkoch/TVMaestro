@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.6
+
+- Harden the server API: validate device IDs, hosts, ports, and refresh intervals; restrict default CORS origins to localhost and Capacitor (configurable via `TVMAESTRO_CORS_ORIGINS`); enforce `client_auth_token` when configured.
+- Improve server reliability: atomic JSON writes, remapped EPG disk cache, proper `3x3` multiview clamping, bounded session history with live-session recovery on restart, concurrent device heartbeats without redundant disk writes, pooled HTTP connections, and clean remote shutdown.
+- Harden the Apple TV control HTTP server against malformed/oversized requests and stalled connections, and clean up unused in-app volume gain plumbing.
+- Fix sample-mode field locking in Settings and memoization in the live multiview channel switcher.
+- Expand automated tests and modernize CI/CD across server, web, mobile companion, Android TV, and Apple TV.
+
 ## 0.4.4
 
 - Explain the server requirement and available TV controls on the companion connection screen.

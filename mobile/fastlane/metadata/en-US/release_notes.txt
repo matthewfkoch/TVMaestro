@@ -1,1 +1,1 @@
-The guide now ships inside the app. Open View sample guide to try it without a server. Connect to your own TVMaestro server when you want to control a television on the home network.
+Bundled guide reliability improvements, sample-mode settings polish, and companion address parsing fixes.
