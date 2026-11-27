@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import shutil
+import tempfile
 from pathlib import Path
 
 from .models import AppConfig
@@ -13,6 +14,22 @@ from .models import AppConfig
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_NAME = "config.json"
+
+
+def atomic_write_text(path: Path, content: str) -> None:
+    """Write text atomically via a same-directory temp file and os.replace."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, path)
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
 
 def data_dir() -> Path:
@@ -65,10 +82,9 @@ class ConfigStore:
             self.save()
 
     def save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
+        atomic_write_text(
+            self.path,
             self.config.model_dump_json(indent=2) + "\n",
-            encoding="utf-8",
         )
 
     def update(self, **kwargs: object) -> AppConfig:

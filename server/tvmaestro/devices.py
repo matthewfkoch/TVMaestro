@@ -11,7 +11,7 @@ import uuid
 from typing import Optional
 
 from . import androidtv_remote, appletv_remote, client_proxy
-from .config import data_dir
+from .config import atomic_write_text, data_dir
 from .models import CecCapabilities, Device, DeviceCapabilities, DeviceCreate, DeviceUpdate
 
 logger = logging.getLogger(__name__)
@@ -63,8 +63,7 @@ class DeviceRegistry:
 
     def _save(self) -> None:
         payload = {"devices": [d.model_dump() for d in self._devices.values()]}
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_text(self._path, json.dumps(payload, indent=2) + "\n")
 
     async def start(self) -> None:
         self._task = asyncio.create_task(self._heartbeat_loop(), name="device-heartbeat")
@@ -76,6 +75,9 @@ class DeviceRegistry:
                 await self._task
             except asyncio.CancelledError:
                 pass
+        async with self._lock:
+            if self._devices:
+                self._save()
 
     async def _heartbeat_loop(self) -> None:
         while True:
@@ -85,8 +87,9 @@ class DeviceRegistry:
     async def poll_all(self) -> None:
         async with self._lock:
             ids = list(self._devices.keys())
-        for device_id in ids:
-            await self.poll_one(device_id)
+        if not ids:
+            return
+        await asyncio.gather(*(self.poll_one(device_id) for device_id in ids), return_exceptions=True)
 
     async def poll_one(self, device_id: str) -> Optional[Device]:
         async with self._lock:
@@ -150,10 +153,20 @@ class DeviceRegistry:
                 chip_note=str(caps_raw.get("chip_note") or ""),
             )
             async with self._lock:
-                if device_id not in self._devices:
+                existing = self._devices.get(device_id)
+                if existing is None:
                     return None
+                changed = (
+                    existing.online != snapshot.online
+                    or existing.model != snapshot.model
+                    or existing.manufacturer != snapshot.manufacturer
+                    or existing.android_version != snapshot.android_version
+                    or existing.capabilities != snapshot.capabilities
+                    or existing.meta != snapshot.meta
+                )
                 self._devices[device_id] = snapshot
-                self._save()
+                if changed:
+                    self._save()
             if appletv_remote.is_apple_tv(snapshot):
                 await client_proxy.notify_guide_link(snapshot)
             return snapshot

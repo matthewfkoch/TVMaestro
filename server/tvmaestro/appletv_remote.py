@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import socket
 from ipaddress import IPv4Address
 from pathlib import Path
@@ -20,6 +21,14 @@ from .config import data_dir
 from .models import Device
 
 logger = logging.getLogger(__name__)
+
+_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _safe_device_id(device_id: str) -> str:
+    if not _SAFE_ID_RE.match(device_id):
+        raise ValueError(f"Unsafe device id: {device_id!r}")
+    return device_id
 
 BUNDLE_ID = "com.tvmaestro.client"
 # Companion HID codes. 8/9 match HidCommand.VolumeUp/VolumeDown (the Siri Remote
@@ -48,18 +57,22 @@ def _dir() -> Path:
 
 
 def storage_path(device_id: str) -> Path:
-    return _dir() / f"{device_id}.conf"
+    return _dir() / f"{_safe_device_id(device_id)}.conf"
 
 
 def _marker_path(device_id: str) -> Path:
-    return _dir() / f"{device_id}.paired"
+    return _dir() / f"{_safe_device_id(device_id)}.paired"
 
 
 def has_credentials(device_id: str) -> bool:
+    if not _SAFE_ID_RE.match(device_id):
+        return False
     return _marker_path(device_id).is_file() and storage_path(device_id).is_file()
 
 
 def clear_credentials(device_id: str) -> None:
+    if not _SAFE_ID_RE.match(device_id):
+        return
     for path in (storage_path(device_id), _marker_path(device_id)):
         try:
             path.unlink(missing_ok=True)
@@ -377,6 +390,13 @@ class RemoteRegistry:
         async with self._lock:
             client = self._clients.pop(device_id, None)
         if client is not None:
+            await client.close()
+
+    async def close_all(self) -> None:
+        async with self._lock:
+            clients = list(self._clients.values())
+            self._clients.clear()
+        for client in clients:
             await client.close()
 
 

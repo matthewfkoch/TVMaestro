@@ -552,8 +552,8 @@ function ChangeGrid({
 }) {
   const { rows, cols } = layoutDims(session.layout);
   const count = rows * cols;
-  const now = Date.now() / 1000;
-  const onNow = useMemo(() => currentByChannel(programmes, now), [programmes, now]);
+  const nowMinute = Math.floor(Date.now() / 60_000) * 60;
+  const onNow = useMemo(() => currentByChannel(programmes, nowMinute), [programmes, nowMinute]);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return channels;

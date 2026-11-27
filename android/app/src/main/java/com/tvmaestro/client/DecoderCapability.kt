@@ -19,18 +19,24 @@ object DecoderCapability {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MANUFACTURER else ""
         val socModel =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL else ""
-        val hay =
-            listOf(
-                Build.MANUFACTURER,
-                Build.BRAND,
-                Build.MODEL,
-                Build.DEVICE,
-                Build.PRODUCT,
-                Build.BOARD,
-                Build.HARDWARE,
+        return detectFrom(
+            manufacturer = Build.MANUFACTURER.orEmpty(),
+            fields = listOf(
+                Build.MANUFACTURER.orEmpty(),
+                Build.BRAND.orEmpty(),
+                Build.MODEL.orEmpty(),
+                Build.DEVICE.orEmpty(),
+                Build.PRODUCT.orEmpty(),
+                Build.BOARD.orEmpty(),
+                Build.HARDWARE.orEmpty(),
                 socManufacturer,
                 socModel,
-            ).joinToString(" ").lowercase()
+            ),
+        )
+    }
+
+    internal fun detectFrom(manufacturer: String, fields: List<String>): Profile {
+        val hay = fields.joinToString(" ").lowercase()
 
         // Known capable: NVIDIA Shield / Tegra
         if (
@@ -53,7 +59,7 @@ object DecoderCapability {
         if (
             hay.contains("amlogic") ||
             hay.contains("meson") ||
-            Build.MANUFACTURER.equals("onn", ignoreCase = true) ||
+            manufacturer.equals("onn", ignoreCase = true) ||
             hay.contains("sheldon") ||
             hay.contains("aftss") ||
             hay.contains("aftmm") ||

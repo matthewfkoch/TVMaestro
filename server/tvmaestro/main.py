@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import logging
 import os
 import time
@@ -10,9 +11,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__, androidtv_remote, appletv_remote, client_proxy
@@ -60,20 +61,59 @@ async def lifespan(app: FastAPI):
 
     await guide.start()
     await devices.start()
+    await sessions.hydrate_from_devices()
     logger.info("TVMaestro %s ready", __version__)
     yield
     await devices.stop()
     await guide.stop()
+    for reg in (androidtv_remote.remotes(), appletv_remote.remotes()):
+        closer = getattr(reg, "close_all", None)
+        if closer is not None:
+            await closer()
+    await client_proxy.close_http_client()
+
+
+DEFAULT_CORS_ORIGIN_REGEX = (
+    r"^(capacitor|ionic)://localhost$|^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+)
+
+
+def _cors_kwargs() -> dict[str, object]:
+    raw = os.environ.get("TVMAESTRO_CORS_ORIGINS", "").strip()
+    if raw == "*":
+        return {"allow_origins": ["*"]}
+    if raw:
+        origins = [o.strip() for o in raw.split(",") if o.strip()]
+        return {"allow_origins": origins}
+    return {"allow_origins": [], "allow_origin_regex": DEFAULT_CORS_ORIGIN_REGEX}
 
 
 app = FastAPI(title="TVMaestro", version=__version__, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    **_cors_kwargs(),
 )
+
+
+@app.middleware("http")
+async def enforce_client_auth_token(request: Request, call_next):
+    """Require X-Auth-Token or Bearer token on /api/* when client_auth_token is configured."""
+    path = request.url.path
+    if request.method != "OPTIONS" and path.startswith("/api/") and path != "/api/status":
+        store = getattr(app.state, "store", None)
+        expected = store.config.client_auth_token.strip() if store else ""
+        if expected:
+            provided = request.headers.get("x-auth-token", "").strip()
+            if not provided:
+                auth = request.headers.get("authorization", "")
+                if auth.lower().startswith("bearer "):
+                    provided = auth[7:].strip()
+            if not provided or not hmac.compare_digest(provided, expected):
+                return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return await call_next(request)
 
 
 def _guide() -> GuideStore:

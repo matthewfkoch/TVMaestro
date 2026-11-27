@@ -13,7 +13,6 @@ final class AppModel: ObservableObject {
     @Published var authToken: String
     @Published var lastError: String?
     @Published var streamWarning: String?
-    @Published var volumeHUD: String?
     @Published var audioHUD: String?
     @Published var chromeVisible = true
     @Published var guideSeen = false
@@ -21,8 +20,6 @@ final class AppModel: ObservableObject {
     @Published var isPreview = false
 
     private var server: ControlServer?
-    private var volumeListener: UUID?
-    private var hudHideTask: Task<Void, Never>?
     private var audioHudTask: Task<Void, Never>?
     private var chromeHideTask: Task<Void, Never>?
     private let defaults = UserDefaults.standard
@@ -73,18 +70,9 @@ final class AppModel: ObservableObject {
         AudioController.configureAudioSession()
         refreshAddresses()
         restartServer()
-        volumeListener = AudioController.shared.addListener { [weak self] in
-            Task { @MainActor in
-                self?.showVolumeHUD()
-            }
-        }
     }
 
     func stop() {
-        if let volumeListener {
-            AudioController.shared.removeListener(volumeListener)
-        }
-        volumeListener = nil
         server?.stop()
         server = nil
         UIApplication.shared.isIdleTimerDisabled = false
@@ -231,24 +219,6 @@ final class AppModel: ObservableObject {
             step()
         }
         return nil
-    }
-
-    private func showVolumeHUD() {
-        let audio = AudioController.shared
-        if audio.isMuted {
-            volumeHUD = "Muted"
-        } else {
-            let pct = Int((audio.gain * 100).rounded())
-            volumeHUD = "Volume \(pct)%"
-        }
-        flashChrome()
-        hudHideTask?.cancel()
-        hudHideTask = Task {
-            try? await Task.sleep(nanoseconds: 1_800_000_000)
-            if !Task.isCancelled {
-                volumeHUD = nil
-            }
-        }
     }
 
     private func restartServer() {
