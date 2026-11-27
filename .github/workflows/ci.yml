@@ -22,6 +22,12 @@ jobs:
           src: server
       - name: Shellcheck (scripts)
         run: shellcheck -S warning scripts/*.sh
+      - name: Verify Fastlane bundle
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: appletv
 
   server:
     name: Server tests
