@@ -1,10 +1,10 @@
 name: Select Xcode
-description: Select the preferred Xcode installation on macOS runners, falling back to the latest available Xcode.
+description: Select the preferred Xcode installation on macOS runners, falling back to the latest available stable Xcode.
 inputs:
   preferred:
     description: Preferred Xcode path if installed
     required: false
-    default: /Applications/Xcode_26.3.app
+    default: ""
 
 runs:
   using: composite
@@ -15,10 +15,13 @@ runs:
         PREFERRED_XCODE: ${{ inputs.preferred }}
       run: |
         set -euo pipefail
-        if [[ -d "$PREFERRED_XCODE" ]]; then
+        if [[ -n "$PREFERRED_XCODE" && -d "$PREFERRED_XCODE" ]]; then
           SELECTED="$PREFERRED_XCODE"
         else
-          SELECTED="$(find /Applications -maxdepth 1 -name 'Xcode_*.app' -type d 2>/dev/null | sort -V | tail -1 || true)"
+          SELECTED="$(find /Applications -maxdepth 1 -name 'Xcode_*.app' \( -type d -o -type l \) 2>/dev/null | grep -ivE 'beta|rc' | sort -V | tail -1 || true)"
+          if [[ -z "$SELECTED" ]]; then
+            SELECTED="$(find /Applications -maxdepth 1 -name 'Xcode_*.app' \( -type d -o -type l \) 2>/dev/null | sort -V | tail -1 || true)"
+          fi
           if [[ -z "$SELECTED" && -d /Applications/Xcode.app ]]; then
             SELECTED="/Applications/Xcode.app"
           fi
@@ -27,3 +30,4 @@ runs:
           sudo xcode-select -s "$SELECTED"
         fi
         xcodebuild -version
+        xcodebuild -showsdks | grep -E 'iOS|tvOS' || true

@@ -75,7 +75,7 @@ jobs:
     name: Apple TV TestFlight
     needs: [changes]
     if: needs.changes.outputs.appletv == 'true'
-    runs-on: macos-15
+    runs-on: xcode-27
     defaults:
       run:
         working-directory: appletv
@@ -108,7 +108,7 @@ jobs:
     name: Companion TestFlight
     needs: [changes]
     if: needs.changes.outputs.companion == 'true'
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7

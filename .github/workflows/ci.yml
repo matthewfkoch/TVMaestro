@@ -121,7 +121,7 @@ jobs:
 
   appletv:
     name: Apple TV
-    runs-on: macos-15
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/select-xcode
@@ -184,7 +184,7 @@ jobs:
 
   companion-ios:
     name: Companion iOS
-    runs-on: macos-15
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/select-xcode
