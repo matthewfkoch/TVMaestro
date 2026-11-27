@@ -80,6 +80,9 @@ updates:
       # Keep Docker Node major aligned with CI (Node 22 LTS).
       - dependency-name: "node"
         update-types: ["version-update:semver-major"]
+      # Keep Docker Python aligned with CI / Ruff (Python 3.12); upgrade together intentionally.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
