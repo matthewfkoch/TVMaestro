@@ -6,6 +6,7 @@
 #   scripts/build-all.sh --skip-docker
 #   scripts/build-all.sh --skip-android
 #   scripts/build-all.sh --skip-appletv
+#   scripts/build-all.sh --skip-mobile
 #   scripts/build-all.sh --only server,web
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,6 +15,7 @@ cd "$ROOT"
 SKIP_DOCKER=0
 SKIP_ANDROID=0
 SKIP_APPLETV=0
+SKIP_MOBILE=0
 ONLY=""
 
 while [[ $# -gt 0 ]]; do
@@ -21,6 +23,7 @@ while [[ $# -gt 0 ]]; do
     --skip-docker) SKIP_DOCKER=1 ;;
     --skip-android) SKIP_ANDROID=1 ;;
     --skip-appletv) SKIP_APPLETV=1 ;;
+    --skip-mobile) SKIP_MOBILE=1 ;;
     --only) ONLY="${2:-}"; shift ;;
     -h|--help)
       sed -n '2,12p' "$0"
@@ -78,7 +81,12 @@ run_step server bash -c '
   pytest -q
 '
 
-run_step web "$ROOT/scripts/build-web.sh"
+run_step web bash -c '
+  set -euo pipefail
+  cd "'"$ROOT"'/web"
+  npm test
+  "'"$ROOT"'/scripts/build-web.sh"
+'
 
 if [[ $SKIP_DOCKER -eq 0 ]]; then
   run_step docker bash -c '
@@ -106,6 +114,9 @@ fi
 
 if [[ $SKIP_APPLETV -eq 0 ]]; then
   if want appletv; then
+    if command -v swiftc >/dev/null 2>&1; then
+      run_step appletv-tests "$ROOT/scripts/test-appletv-core.sh"
+    fi
     if command -v xcodebuild >/dev/null 2>&1 && xcodebuild -version >/dev/null 2>&1; then
       run_step appletv "$ROOT/scripts/build-appletv.sh"
     else
@@ -114,6 +125,21 @@ if [[ $SKIP_APPLETV -eq 0 ]]; then
   fi
 else
   echo "skip appletv (--skip-appletv)"
+fi
+
+if [[ $SKIP_MOBILE -eq 0 ]]; then
+  if want mobile; then
+    run_step mobile-tests bash -c '
+      set -euo pipefail
+      cd "'"$ROOT"'/mobile"
+      npm test
+    '
+    if command -v npm >/dev/null 2>&1; then
+      run_step mobile "$ROOT/scripts/build-mobile.sh"
+    fi
+  fi
+else
+  echo "skip mobile (--skip-mobile)"
 fi
 
 echo

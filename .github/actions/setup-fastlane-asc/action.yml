@@ -1,0 +1,76 @@
+name: Set up Fastlane and App Store Connect key
+description: Validate ASC credentials, install Fastlane via Bundler, and write the .p8 API key.
+inputs:
+  asc-key-id:
+    required: false
+    default: ""
+  asc-issuer-id:
+    required: false
+    default: ""
+  asc-private-key:
+    required: false
+    default: ""
+  apple-team-id:
+    required: false
+    default: ""
+  fail-if-missing:
+    description: Fail the job if any required ASC secret is empty
+    required: false
+    default: "false"
+
+outputs:
+  enabled:
+    description: "'true' when all ASC secrets are configured"
+    value: ${{ steps.check.outputs.enabled }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check App Store Connect secrets
+      id: check
+      shell: bash
+      env:
+        ASC_KEY_ID: ${{ inputs.asc-key-id }}
+        ASC_ISSUER_ID: ${{ inputs.asc-issuer-id }}
+        ASC_PRIVATE_KEY: ${{ inputs.asc-private-key }}
+        APPLE_TEAM_ID: ${{ inputs.apple-team-id }}
+        FAIL_IF_MISSING: ${{ inputs.fail-if-missing }}
+      run: |
+        set -euo pipefail
+        if [[ -z "$ASC_KEY_ID" || -z "$ASC_ISSUER_ID" || -z "$ASC_PRIVATE_KEY" || -z "$APPLE_TEAM_ID" ]]; then
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          if [[ "$FAIL_IF_MISSING" == "true" ]]; then
+            echo "::error::Missing ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY, or APPLE_TEAM_ID."
+            exit 1
+          fi
+          echo "::notice::App Store Connect secrets are not configured; skipping upload"
+        else
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - uses: ruby/setup-ruby@v1
+      if: steps.check.outputs.enabled == 'true'
+      with:
+        ruby-version: "3.1"
+        bundler-cache: true
+        working-directory: appletv
+
+    - name: Install Fastlane
+      if: steps.check.outputs.enabled == 'true'
+      shell: bash
+      working-directory: appletv
+      run: bundle install
+
+    - name: Configure App Store Connect API key
+      if: steps.check.outputs.enabled == 'true'
+      shell: bash
+      env:
+        ASC_KEY_ID: ${{ inputs.asc-key-id }}
+        ASC_PRIVATE_KEY: ${{ inputs.asc-private-key }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$HOME/private_keys"
+        KEY_PATH="$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+        printf '%s' "$ASC_PRIVATE_KEY" > "$KEY_PATH"
+        chmod 600 "$KEY_PATH"
+        echo "ASC_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"

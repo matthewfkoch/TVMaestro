@@ -1,0 +1,58 @@
+name: Prepare Android release keystore
+description: Decode KEYSTORE_BASE64 into keystore.jks when release signing secrets are configured.
+inputs:
+  working-directory:
+    required: true
+  keystore-base64:
+    required: false
+    default: ""
+  keystore-password:
+    required: false
+    default: ""
+  key-alias:
+    required: false
+    default: ""
+  key-password:
+    required: false
+    default: ""
+  require-signing:
+    description: Fail instead of falling back to debug APK when signing secrets are missing
+    required: false
+    default: "false"
+
+outputs:
+  enabled:
+    description: "'true' if keystore.jks was created"
+    value: ${{ steps.signing.outputs.enabled }}
+
+runs:
+  using: composite
+  steps:
+    - name: Decode keystore
+      id: signing
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        KEYSTORE_BASE64: ${{ inputs.keystore-base64 }}
+        KEYSTORE_PASSWORD: ${{ inputs.keystore-password }}
+        KEY_ALIAS: ${{ inputs.key-alias }}
+        KEY_PASSWORD: ${{ inputs.key-password }}
+        REQUIRE_SIGNING: ${{ inputs.require-signing }}
+      run: |
+        set -euo pipefail
+        if [[ -n "$KEYSTORE_BASE64" && -n "$KEYSTORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]; then
+          echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+          if [[ ! -s keystore.jks ]]; then
+            echo "::error::Failed to write keystore.jks"
+            exit 1
+          fi
+          chmod 600 keystore.jks
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          echo "Release signing enabled"
+        elif [[ "$REQUIRE_SIGNING" == "true" ]]; then
+          echo "::error::Release signing secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) are required for tagged releases."
+          exit 1
+        else
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::No release keystore secrets; falling back to debug APK"
+        fi

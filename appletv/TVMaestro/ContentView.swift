@@ -4,7 +4,6 @@ struct ContentView: View {
     @EnvironmentObject private var app: AppModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var showSettings = false
-    @StateObject private var audioTick = AudioTick()
     @FocusState private var playbackFocus: PlaybackFocus?
 
     var body: some View {
@@ -13,7 +12,7 @@ struct ContentView: View {
 
             if let session = app.session, session.slots.contains(where: \.isPlayable) {
                 ZStack {
-                    PlayerGridView(session: session, audioTick: audioTick) { message in
+                    PlayerGridView(session: session) { message in
                         app.reportPlaybackError(message)
                     }
                     playbackFocusSurface
@@ -147,7 +146,7 @@ struct ContentView: View {
     @ViewBuilder
     private var playbackChrome: some View {
         VStack(spacing: 0) {
-            if app.chromeVisible && (app.streamWarning != nil || app.lastError != nil || app.volumeHUD != nil) {
+            if app.chromeVisible && (app.streamWarning != nil || app.lastError != nil) {
                 HStack(alignment: .top, spacing: 24) {
                     VStack(alignment: .leading, spacing: 8) {
                         if let warning = app.streamWarning {
@@ -163,14 +162,6 @@ struct ContentView: View {
                         }
                     }
                     Spacer(minLength: 0)
-                    if let hud = app.volumeHUD {
-                        Text(hud)
-                            .font(.headline.monospacedDigit())
-                            .foregroundStyle(Theme.bg)
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 10)
-                            .background(Theme.accent, in: Capsule())
-                    }
                 }
                 .padding(.horizontal, 48)
                 .padding(.top, 36)
@@ -221,7 +212,6 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: app.chromeVisible)
-        .animation(.easeInOut(duration: 0.2), value: app.volumeHUD)
     }
 }
 

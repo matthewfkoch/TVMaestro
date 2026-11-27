@@ -13,6 +13,9 @@ final class TinyHTTPServer {
     private let stateLock = NSLock()
     private let queue = DispatchQueue(label: "com.tvmaestro.httpserver")
 
+    static let maxRequestBytes = 2 * 1024 * 1024
+    static let connectionTimeoutSeconds: TimeInterval = 15
+
     /// True while a listener exists and has not failed. `.setup` counts so a
     /// foreground bounce during startup does not cancel a bind still in progress.
     var isListening: Bool {
@@ -28,7 +31,7 @@ final class TinyHTTPServer {
     }
 
     init(port: UInt16, handler: @escaping Handler) {
-        self.port = NWEndpoint.Port(rawValue: port)!
+        self.port = NWEndpoint.Port(rawValue: port) ?? NWEndpoint.Port(rawValue: 6791)!
         self.handler = handler
     }
 
@@ -86,16 +89,22 @@ final class TinyHTTPServer {
 
     private func accept(_ connection: NWConnection) {
         connection.start(queue: queue)
-        receive(on: connection, buffer: Data())
+        let timeout = DispatchWorkItem { [weak connection] in
+            connection?.cancel()
+        }
+        queue.asyncAfter(deadline: .now() + Self.connectionTimeoutSeconds, execute: timeout)
+        receive(on: connection, buffer: Data(), timeout: timeout)
     }
 
-    private func receive(on connection: NWConnection, buffer: Data) {
+    private func receive(on connection: NWConnection, buffer: Data, timeout: DispatchWorkItem) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
             guard let self else {
+                timeout.cancel()
                 connection.cancel()
                 return
             }
             if let error {
+                timeout.cancel()
                 NSLog("TVMaestro HTTP receive error: \(error)")
                 connection.cancel()
                 return
@@ -103,22 +112,36 @@ final class TinyHTTPServer {
             var buf = buffer
             if let data { buf.append(data) }
 
-            if let request = Self.parseRequest(buf) {
+            switch Self.parseRequestResult(buf) {
+            case .ok(let request):
+                timeout.cancel()
                 let response = self.handler(request.method, request.path, request.headers, request.body)
                 self.send(response, on: connection)
                 return
+            case .invalid:
+                timeout.cancel()
+                self.send((400, Data("Bad Request".utf8), "text/plain"), on: connection)
+                return
+            case .tooLarge:
+                timeout.cancel()
+                self.send((413, Data("Payload too large".utf8), "text/plain"), on: connection)
+                return
+            case .incomplete:
+                break
             }
 
             if isComplete {
+                timeout.cancel()
                 connection.cancel()
                 return
             }
             // Headers incomplete or body still arriving
-            if buf.count > 2 * 1024 * 1024 {
+            if buf.count > Self.maxRequestBytes {
+                timeout.cancel()
                 self.send((413, Data("Payload too large".utf8), "text/plain"), on: connection)
                 return
             }
-            self.receive(on: connection, buffer: buf)
+            self.receive(on: connection, buffer: buf, timeout: timeout)
         }
     }
 
@@ -143,21 +166,28 @@ final class TinyHTTPServer {
         })
     }
 
-    private struct Parsed {
+    struct Parsed: Equatable {
         var method: String
         var path: String
         var headers: [String: String]
         var body: Data
     }
 
-    private static func parseRequest(_ data: Data) -> Parsed? {
-        guard let headerEnd = data.range(of: Data("\r\n\r\n".utf8)) else { return nil }
+    enum ParseResult: Equatable {
+        case incomplete
+        case invalid
+        case tooLarge
+        case ok(Parsed)
+    }
+
+    static func parseRequestResult(_ data: Data) -> ParseResult {
+        guard let headerEnd = data.range(of: Data("\r\n\r\n".utf8)) else { return .incomplete }
         let headerData = data.subdata(in: data.startIndex..<headerEnd.lowerBound)
-        guard let headerText = String(data: headerData, encoding: .utf8) else { return nil }
+        guard let headerText = String(data: headerData, encoding: .utf8) else { return .invalid }
         let lines = headerText.split(separator: "\r\n", omittingEmptySubsequences: false)
-        guard let requestLine = lines.first else { return nil }
+        guard let requestLine = lines.first else { return .invalid }
         let parts = requestLine.split(separator: " ")
-        guard parts.count >= 2 else { return nil }
+        guard parts.count >= 2 else { return .invalid }
         let method = String(parts[0])
         let path = String(parts[1].split(separator: "?").first ?? parts[1])
 
@@ -170,10 +200,19 @@ final class TinyHTTPServer {
         }
 
         let bodyStart = headerEnd.upperBound
-        let contentLength = Int(headers["content-length"] ?? "0") ?? 0
+        let contentLength: Int
+        if let rawLength = headers["content-length"] {
+            guard let parsedLength = Int(rawLength), parsedLength >= 0 else { return .invalid }
+            contentLength = parsedLength
+        } else {
+            contentLength = 0
+        }
+        if contentLength > maxRequestBytes || bodyStart + contentLength > maxRequestBytes + headerEnd.upperBound {
+            return .tooLarge
+        }
         let available = data.count - bodyStart
-        guard available >= contentLength else { return nil }
+        guard available >= contentLength else { return .incomplete }
         let body = data.subdata(in: bodyStart..<(bodyStart + contentLength))
-        return Parsed(method: method, path: path, headers: headers, body: body)
+        return .ok(Parsed(method: method, path: path, headers: headers, body: body))
     }
 }

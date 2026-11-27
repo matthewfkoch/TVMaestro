@@ -3,22 +3,53 @@
 from __future__ import annotations
 
 from enum import Enum
+import re
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+_DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+_HOST_RE = re.compile(r"^[A-Za-z0-9.\[\]:_-]{1,253}$")
+
+
+def _validate_device_id(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    if not cleaned or not _DEVICE_ID_RE.match(cleaned):
+        raise ValueError("Device id must be 1–64 characters of letters, digits, '-' or '_'")
+    return cleaned
+
+
+def _validate_host(value: str) -> str:
+    cleaned = value.strip()
+    if (
+        not cleaned
+        or cleaned.startswith("-")
+        or "://" in cleaned
+        or not _HOST_RE.match(cleaned)
+    ):
+        raise ValueError("Invalid device host")
+    return cleaned
+
+
+def _validate_port(value: int) -> int:
+    if not 1 <= value <= 65535:
+        raise ValueError("Port must be between 1 and 65535")
+    return value
 
 
 class AppConfig(BaseModel):
     channels_dvr_m3u_url: str = ""
     channels_dvr_xmltv_url: str = ""
-    m3u_refresh_seconds: int = 300
-    xmltv_refresh_seconds: int = 900
-    # Reserved — not enforced by the API yet. Empty means open LAN control plane.
+    m3u_refresh_seconds: int = Field(default=300, ge=10)
+    xmltv_refresh_seconds: int = Field(default=900, ge=10)
+    # Empty means open LAN control plane; non-empty requires X-Auth-Token or Bearer token.
     client_auth_token: str = ""
     apituner_base_url: str = ""
     apituner_auth_token: str = ""
     # Informational only; listen port comes from uvicorn / compose / TVMAESTRO_PORT.
-    server_port: int = 6790
+    server_port: int = Field(default=6790, ge=1, le=65535)
 
 
 class Channel(BaseModel):
@@ -86,12 +117,37 @@ class DeviceCreate(BaseModel):
     # guide can pair and launch it. android (or omitted) waits for /api/info.
     platform: Optional[Literal["android", "tvos"]] = None
 
+    @field_validator("id")
+    @classmethod
+    def check_id(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_device_id(v)
+
+    @field_validator("host")
+    @classmethod
+    def check_host(cls, v: str) -> str:
+        return _validate_host(v)
+
+    @field_validator("port")
+    @classmethod
+    def check_port(cls, v: int) -> int:
+        return _validate_port(v)
+
 
 class DeviceUpdate(BaseModel):
     name: Optional[str] = None
     host: Optional[str] = None
     port: Optional[int] = None
     token: Optional[str] = None
+
+    @field_validator("host")
+    @classmethod
+    def check_host(cls, v: Optional[str]) -> Optional[str]:
+        return None if v is None else _validate_host(v)
+
+    @field_validator("port")
+    @classmethod
+    def check_port(cls, v: Optional[int]) -> Optional[int]:
+        return None if v is None else _validate_port(v)
 
 
 class Layout(str, Enum):
@@ -156,6 +212,11 @@ class CecByHostRequest(BaseModel):
     host: str
     action: CecAction
 
+    @field_validator("host")
+    @classmethod
+    def check_host(cls, v: str) -> str:
+        return _validate_host(v)
+
 
 class PairFinishRequest(BaseModel):
     pin: str
@@ -164,8 +225,8 @@ class PairFinishRequest(BaseModel):
 class ConfigUpdate(BaseModel):
     channels_dvr_m3u_url: Optional[str] = None
     channels_dvr_xmltv_url: Optional[str] = None
-    m3u_refresh_seconds: Optional[int] = None
-    xmltv_refresh_seconds: Optional[int] = None
+    m3u_refresh_seconds: Optional[int] = Field(default=None, ge=10)
+    xmltv_refresh_seconds: Optional[int] = Field(default=None, ge=10)
     client_auth_token: Optional[str] = None
     apituner_base_url: Optional[str] = None
     apituner_auth_token: Optional[str] = None

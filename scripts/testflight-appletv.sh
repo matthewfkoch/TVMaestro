@@ -58,7 +58,8 @@ if [[ -z "$xcodebuild_bin" || ! -x "$xcodebuild_bin" ]] || ! "$xcodebuild_bin" -
   exit 1
 fi
 
-export PATH="$(dirname "$xcodebuild_bin"):$PATH"
+xcodebuild_dir="$(dirname "$xcodebuild_bin")"
+export PATH="${xcodebuild_dir}:$PATH"
 
 if [[ -z "${FASTLANE_USER:-}" ]]; then
   echo "Apple ID for TestFlight:"

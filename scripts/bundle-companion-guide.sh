@@ -3,7 +3,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/web"
-npm install
+if [[ -f package-lock.json ]]; then
+  npm ci
+else
+  npm install
+fi
 TVMAESTRO_COMPANION=1 npm run build -- --base=/guide/
 rm -rf "$ROOT/mobile/www/guide"
 mkdir -p "$ROOT/mobile/www/guide"

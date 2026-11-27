@@ -10,10 +10,12 @@ web/node_modules
 server/tvmaestro/web
 android
 appletv
+mobile
 branding
 data
 dist
 scripts
+.cursor
 *.md
 *.apk
 .DS_Store

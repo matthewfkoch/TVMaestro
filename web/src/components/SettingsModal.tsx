@@ -77,6 +77,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
               <input
                 value={cfg.channels_dvr_xmltv_url}
                 placeholder="http://channels-dvr.local:8089/devices/ANY/guide/xmltv?duration=1209600"
+                disabled={sample}
                 onChange={(e) => setCfg({ ...cfg, channels_dvr_xmltv_url: e.target.value })}
               />
             </div>
@@ -85,6 +86,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
               <input
                 value={cfg.apituner_base_url}
                 placeholder="http://apituner.local:6592"
+                disabled={sample}
                 onChange={(e) => setCfg({ ...cfg, apituner_base_url: e.target.value })}
               />
             </div>
@@ -94,6 +96,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
                 type="password"
                 autoComplete="off"
                 value={cfg.apituner_auth_token}
+                disabled={sample}
                 placeholder={
                   cfg.apituner_auth_token === REDACTED_SECRET
                     ? "Stored — leave unchanged or enter a new token"
@@ -110,6 +113,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
               <input
                 type="number"
                 value={cfg.m3u_refresh_seconds}
+                disabled={sample}
                 onChange={(e) =>
                   setCfg({ ...cfg, m3u_refresh_seconds: Number(e.target.value) || 300 })
                 }
@@ -120,6 +124,7 @@ export default function SettingsModal({ open, onClose, onSaved }: Props) {
               <input
                 type="number"
                 value={cfg.xmltv_refresh_seconds}
+                disabled={sample}
                 onChange={(e) =>
                   setCfg({ ...cfg, xmltv_refresh_seconds: Number(e.target.value) || 900 })
                 }

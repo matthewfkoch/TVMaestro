@@ -5,7 +5,6 @@ import SwiftUI
 
 struct PlayerGridView: View {
     let session: PlaybackSession
-    @ObservedObject var audioTick: AudioTick
     var onError: (String) -> Void
 
     private var geometry: (rows: Int, cols: Int) {
@@ -29,7 +28,6 @@ struct PlayerGridView: View {
                                 slot: slots[index],
                                 paneIndex: index,
                                 showChrome: showChrome,
-                                audioTick: audioTick,
                                 onError: onError
                             )
                         } else {
@@ -43,31 +41,10 @@ struct PlayerGridView: View {
     }
 }
 
-/// Cheap observable so slot players re-apply gain when CEC volume changes.
-final class AudioTick: ObservableObject {
-    @Published private(set) var generation = 0
-    private var listener: UUID?
-
-    init() {
-        listener = AudioController.shared.addListener { [weak self] in
-            DispatchQueue.main.async {
-                self?.generation += 1
-            }
-        }
-    }
-
-    deinit {
-        if let listener {
-            AudioController.shared.removeListener(listener)
-        }
-    }
-}
-
 struct SlotPlayerView: View {
     let slot: SessionSlot
     let paneIndex: Int
     let showChrome: Bool
-    @ObservedObject var audioTick: AudioTick
     var onError: (String) -> Void
 
     @StateObject private var coordinator = KSVideoPlayer.Coordinator()
@@ -147,9 +124,6 @@ struct SlotPlayerView: View {
         }
         .onChange(of: armed) { _, isArmed in
             if isArmed { applyVolume() }
-        }
-        .onChange(of: audioTick.generation) { _, _ in
-            applyVolume()
         }
     }
 
