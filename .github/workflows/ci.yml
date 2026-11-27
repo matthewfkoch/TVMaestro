@@ -96,7 +96,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - uses: ./.github/actions/setup-android-sdk
         with:
           platform: "platforms;android-37.0"
@@ -143,7 +143,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
