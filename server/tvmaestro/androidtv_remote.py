@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
+import re
 from typing import Any, Optional
 
 from .config import data_dir
@@ -18,6 +19,13 @@ logger = logging.getLogger(__name__)
 CLIENT_NAME = "TVMaestro"
 DEFAULT_API_PORT = 6466
 DEFAULT_PAIR_PORT = 6467
+_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _safe_device_id(device_id: str) -> str:
+    if not _SAFE_ID_RE.match(device_id):
+        raise ValueError(f"Unsafe device id: {device_id!r}")
+    return device_id
 
 
 class RemoteError(Exception):
@@ -39,11 +47,15 @@ def certs_dir() -> Path:
 
 
 def has_certs(device_id: str) -> bool:
+    if not _SAFE_ID_RE.match(device_id):
+        return False
     base = certs_dir()
     return (base / f"{device_id}.crt").is_file() and (base / f"{device_id}.key").is_file()
 
 
 def clear_certs(device_id: str) -> None:
+    if not _SAFE_ID_RE.match(device_id):
+        return
     base = certs_dir()
     for suffix in (".crt", ".key"):
         path = base / f"{device_id}{suffix}"
@@ -63,7 +75,7 @@ class AndroidTvRemoteClient:
         api_port: int = DEFAULT_API_PORT,
         pair_port: int = DEFAULT_PAIR_PORT,
     ) -> None:
-        self.device_id = device.id
+        self.device_id = _safe_device_id(device.id)
         self.host = device.host
         self.api_port = api_port
         self.pair_port = pair_port
@@ -183,6 +195,13 @@ class RemoteRegistry:
             client = self._clients.pop(device_id, None)
             if client:
                 await client.close()
+
+    async def close_all(self) -> None:
+        async with self._lock:
+            clients = list(self._clients.values())
+            self._clients.clear()
+        for client in clients:
+            await client.close()
 
 
 _registry: Optional[RemoteRegistry] = None

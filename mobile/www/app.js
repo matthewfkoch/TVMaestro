@@ -1,9 +1,11 @@
-const DEFAULT_PORT = "6790";
+const { DEFAULT_PORT, parseServer } = window.TVMaestroServerAddress;
+const API_ORIGIN_KEY = "tvmaestroApiOrigin";
 
 const form = document.getElementById("form");
 const hostInput = document.getElementById("host");
 const portInput = document.getElementById("port");
 const submitButton = document.getElementById("submit");
+const sampleButton = document.getElementById("sample");
 const message = document.getElementById("message");
 
 function setMessage(text, pending) {
@@ -25,53 +27,6 @@ function plugins() {
     },
   );
   return { Companion };
-}
-
-function cleanAddress(value) {
-  // The iOS URL keyboard inserts invisible direction marks. new URL() rejects those.
-  return String(value || "")
-    .replace(/[\u0000-\u001F\u007F\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uFFFC\uFFFD]/g, "")
-    .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
-    .replace(/[\u3002\uFF61\uFE52\u2024]/g, ".")
-    .trim();
-}
-
-function parseServer(rawHost, rawPort) {
-  let input = cleanAddress(rawHost);
-  const typedPort = cleanAddress(rawPort);
-  if (!input) {
-    throw new Error("Enter the server address.");
-  }
-  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(input)) {
-    input = `http://${input}`;
-  }
-  let url;
-  try {
-    url = new URL(input);
-  } catch {
-    throw new Error("That address is not valid.");
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Use an http or https address.");
-  }
-  if (!url.hostname) {
-    throw new Error("Enter the server address.");
-  }
-  let port = url.port;
-  if (!port) {
-    port = typedPort || DEFAULT_PORT;
-  }
-  if (!/^\d+$/.test(port) || Number(port) < 1 || Number(port) > 65535) {
-    throw new Error("Port must be between 1 and 65535.");
-  }
-  const hostname = url.hostname.includes(":") ? `[${url.hostname}]` : url.hostname;
-  const scheme = url.protocol.slice(0, -1);
-  return {
-    host: hostname,
-    port,
-    scheme,
-    origin: `${url.protocol}//${hostname}:${port}`,
-  };
 }
 
 async function probe(origin) {
@@ -107,16 +62,28 @@ async function probe(origin) {
   }
 }
 
-async function connect(server) {
+async function openGuide(options) {
   const { Companion } = plugins();
+  if (options.sample) {
+    sessionStorage.removeItem(API_ORIGIN_KEY);
+  } else {
+    sessionStorage.setItem(API_ORIGIN_KEY, options.origin);
+  }
+  await Companion.openGuide({ sample: Boolean(options.sample) });
+}
+
+async function connect(server) {
   setMessage(`Connecting to ${server.origin}…`, true);
   submitButton.disabled = true;
+  sampleButton.disabled = true;
   try {
     await probe(server.origin);
+    const { Companion } = plugins();
     await Companion.setServer({ host: server.host, port: server.port, scheme: server.scheme });
-    await Companion.load({ url: `${server.origin}/` });
+    await openGuide({ sample: false, origin: server.origin });
   } catch (error) {
     submitButton.disabled = false;
+    sampleButton.disabled = false;
     setMessage(error instanceof Error ? error.message : "Could not reach the server.");
   }
 }
@@ -131,6 +98,17 @@ form.addEventListener("submit", (event) => {
     return;
   }
   void connect(server);
+});
+
+sampleButton.addEventListener("click", () => {
+  setMessage("Opening sample guide…", true);
+  submitButton.disabled = true;
+  sampleButton.disabled = true;
+  void openGuide({ sample: true }).catch((error) => {
+    submitButton.disabled = false;
+    sampleButton.disabled = false;
+    setMessage(error instanceof Error ? error.message : "Could not open the sample guide.");
+  });
 });
 
 async function restore() {

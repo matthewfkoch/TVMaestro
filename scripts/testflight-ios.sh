@@ -19,13 +19,16 @@ if [[ -z "${FASTLANE_PASSWORD:-}" && -n "${FASTLANE_APPLE_APPLICATION_SPECIFIC_P
 fi
 
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
-if [[ -x /opt/homebrew/opt/ruby@3.4/bin/bundle ]]; then
+if [[ -x /opt/homebrew/opt/ruby@3.3/bin/bundle ]]; then
+  export PATH="/opt/homebrew/opt/ruby@3.3/bin:$PATH"
+elif [[ -x /opt/homebrew/opt/ruby@3.4/bin/bundle ]]; then
   export PATH="/opt/homebrew/opt/ruby@3.4/bin:$PATH"
 elif [[ -x /opt/homebrew/opt/ruby/bin/bundle ]]; then
   export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 fi
 export PATH="${DEVELOPER_DIR}/usr/bin:$PATH"
 
+"$ROOT/scripts/bundle-companion-guide.sh"
 "$ROOT/scripts/build-mobile.sh" --prepare-ios-only
 # codesign rejects resource forks and Finder info copied into the app bundle.
 xattr -cr "$ROOT/mobile/ios" "$ROOT/mobile/www" || true

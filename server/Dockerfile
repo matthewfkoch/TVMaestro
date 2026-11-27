@@ -5,7 +5,7 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -35,5 +35,8 @@ COPY --from=web /web/dist ./tvmaestro/web
 
 VOLUME ["/data"]
 EXPOSE 6790
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python3 -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"TVMAESTRO_PORT\", \"6790\")}/api/status', timeout=3)" || exit 1
 
 CMD ["sh", "-c", "uvicorn tvmaestro.main:app --host 0.0.0.0 --port ${TVMAESTRO_PORT}"]

@@ -92,6 +92,14 @@ button {
   font-weight: 650;
 }
 
+button.secondary {
+  margin-top: 0.55rem;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+
 button:disabled {
   opacity: 0.55;
 }

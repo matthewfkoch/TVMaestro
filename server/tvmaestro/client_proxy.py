@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 import json
 import logging
 import re
 import shutil
 import time
-from typing import Any, Optional
+from typing import Any, AsyncIterator, Optional
 
 import httpx
 
@@ -18,6 +19,31 @@ from .models import CecAction, Device, SessionSlot, SessionState
 logger = logging.getLogger(__name__)
 
 _HTML_TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+_REAL_ASYNC_CLIENT = httpx.AsyncClient
+_shared_client: Optional[httpx.AsyncClient] = None
+
+
+@asynccontextmanager
+async def _http_client(timeout: float) -> AsyncIterator[tuple[Any, dict[str, Any]]]:
+    """Yield a pooled httpx.AsyncClient, falling back cleanly if tests monkeypatch AsyncClient."""
+    if httpx.AsyncClient is not _REAL_ASYNC_CLIENT:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            yield client, {}
+        return
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = _REAL_ASYNC_CLIENT(
+            limits=httpx.Limits(max_connections=32, max_keepalive_connections=16)
+        )
+    yield _shared_client, {"timeout": timeout}
+
+
+async def close_http_client() -> None:
+    global _shared_client
+    client = _shared_client
+    _shared_client = None
+    if client is not None and not client.is_closed:
+        await client.aclose()
 
 
 def _headers(device: Device) -> dict[str, str]:
@@ -64,14 +90,14 @@ def read_json(resp: httpx.Response, device: Device) -> Any:
 
 
 async def health(device: Device, timeout: float = 3.0) -> dict[str, Any]:
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.get(f"{_base(device)}/api/health", headers=_headers(device))
+    async with _http_client(timeout) as (client, kw):
+        resp = await client.get(f"{_base(device)}/api/health", headers=_headers(device), **kw)
         return read_json(resp, device)
 
 
 async def info(device: Device, timeout: float = 5.0) -> dict[str, Any]:
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.get(f"{_base(device)}/api/info", headers=_headers(device))
+    async with _http_client(timeout) as (client, kw):
+        resp = await client.get(f"{_base(device)}/api/info", headers=_headers(device), **kw)
         return read_json(resp, device)
 
 
@@ -85,11 +111,12 @@ async def notify_guide_link(device: Device) -> None:
         "name": device.name,
     }
     try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
+        async with _http_client(2.0) as (client, kw):
             resp = await client.post(
                 f"{_base(device)}/api/guide",
                 headers=_headers(device),
                 json=payload,
+                **kw,
             )
             resp.raise_for_status()
     except Exception as exc:  # noqa: BLE001
@@ -99,8 +126,8 @@ async def notify_guide_link(device: Device) -> None:
 async def _client_listening(device: Device, timeout: float = 1.5) -> bool:
     """True when something answers the control port, including an auth challenge."""
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            resp = await client.get(f"{_base(device)}/api/health", headers=_headers(device))
+        async with _http_client(timeout) as (client, kw):
+            resp = await client.get(f"{_base(device)}/api/health", headers=_headers(device), **kw)
         return resp.status_code < 500
     except Exception:  # noqa: BLE001
         return False
@@ -173,11 +200,12 @@ async def push_session(device: Device, session: SessionState, timeout: float = 1
             for s in session.slots
         ],
     }
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with _http_client(timeout) as (client, kw):
         resp = await client.post(
             f"{_base(device)}/api/session",
             headers=_headers(device),
             json=payload,
+            **kw,
         )
         data = read_json(resp, device)
         if isinstance(data, dict) and data.get("success") is False:
@@ -193,7 +221,7 @@ async def replace_slot(
     timeout: float = 8.0,
 ) -> dict[str, Any]:
     """Replace one pane. Clients must not restart the other players."""
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with _http_client(timeout) as (client, kw):
         resp = await client.post(
             f"{_base(device)}/api/session/slot",
             headers=_headers(device),
@@ -207,6 +235,7 @@ async def replace_slot(
                     "channel_id": slot.channel_id,
                 },
             },
+            **kw,
         )
         data = read_json(resp, device)
         if isinstance(data, dict) and data.get("success") is False:
@@ -216,11 +245,12 @@ async def replace_slot(
 
 async def set_audio(device: Device, index: int, timeout: float = 8.0) -> dict[str, Any]:
     """Move audio focus without sending a new session. Clients must not restart streams."""
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with _http_client(timeout) as (client, kw):
         resp = await client.post(
             f"{_base(device)}/api/session/audio",
             headers=_headers(device),
             json={"index": index},
+            **kw,
         )
         data = read_json(resp, device)
         if isinstance(data, dict) and data.get("success") is False:
@@ -229,18 +259,19 @@ async def set_audio(device: Device, index: int, timeout: float = 8.0) -> dict[st
 
 
 async def stop_session(device: Device, timeout: float = 10.0) -> dict[str, Any]:
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with _http_client(timeout) as (client, kw):
         resp = await client.post(
             f"{_base(device)}/api/session/stop",
             headers=_headers(device),
             json={},
+            **kw,
         )
         return read_json(resp, device)
 
 
 async def get_session(device: Device, timeout: float = 5.0) -> Optional[dict[str, Any]]:
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.get(f"{_base(device)}/api/session", headers=_headers(device))
+    async with _http_client(timeout) as (client, kw):
+        resp = await client.get(f"{_base(device)}/api/session", headers=_headers(device), **kw)
         return read_json(resp, device)
 
 
@@ -371,11 +402,12 @@ async def cec(device: Device, action: CecAction, timeout: float = 5.0) -> dict[s
 
     result: dict[str, Any]
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        async with _http_client(timeout) as (client, kw):
             resp = await client.post(
                 f"{_base(device)}/api/cec",
                 headers=_headers(device),
                 json={"action": action.value},
+                **kw,
             )
             result = read_json(resp, device)
     except Exception as exc:  # noqa: BLE001
@@ -395,11 +427,15 @@ async def cec(device: Device, action: CecAction, timeout: float = 5.0) -> dict[s
 
 async def adb_power(host: str, *, on: bool) -> bool:
     """Wake/sleep via adb network debugging (fallback)."""
+    clean_host = host.strip()
+    if not clean_host or clean_host.startswith("-") or any(c.isspace() for c in clean_host):
+        logger.warning("Refusing invalid adb host %r", host)
+        return False
     adb = shutil.which("adb")
     if not adb:
-        logger.debug("adb not found on PATH; cannot power-fallback for %s", host)
+        logger.debug("adb not found on PATH; cannot power-fallback for %s", clean_host)
         return False
-    serial = host if ":" in host else f"{host}:5555"
+    serial = clean_host if ":" in clean_host else f"{clean_host}:5555"
     key = "KEYCODE_WAKEUP" if on else "KEYCODE_SLEEP"
     try:
         connect = await asyncio.create_subprocess_exec(
@@ -413,6 +449,7 @@ async def adb_power(host: str, *, on: bool) -> bool:
             await asyncio.wait_for(connect.wait(), timeout=5)
         except asyncio.TimeoutError:
             connect.kill()
+            await connect.wait()
         proc = await asyncio.create_subprocess_exec(
             adb,
             "-s",
@@ -428,6 +465,7 @@ async def adb_power(host: str, *, on: bool) -> bool:
             _, err = await asyncio.wait_for(proc.communicate(), timeout=8)
         except asyncio.TimeoutError:
             proc.kill()
+            await proc.wait()
             return False
         if proc.returncode != 0:
             logger.warning("adb power %s failed: %s", key, err.decode(errors="replace"))

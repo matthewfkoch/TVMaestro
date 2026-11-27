@@ -1,1 +1,3 @@
-This update includes maintenance and build improvements.
+Default control port is 6791. Saved control ports stay as configured.
+
+If the TV looks offline after upgrading, match Edit device port to the address on the TV, or set the TV control port back to 9093. Port-only changes do not need re-pairing.

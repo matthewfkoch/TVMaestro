@@ -1,16 +1,18 @@
 # TVMaestro companion
 
-Phone and tablet remote for a TVMaestro server. Enter the server address and the app shows the same guide as `http://<host>:6790`. Playback stays on the Android TV and Apple TV apps.
+Phone and tablet guide for a TVMaestro server. Enter the server address and the app opens the bundled guide against that server’s API. Playback stays on the Android TV and Apple TV apps.
 
 Bundle id: `com.tvmaestro.companion`. It is a separate install from the Android TV client.
 
 ## Connect
 
-The first screen asks for the server address and port (default **6790**). The app checks `GET /api/status`, remembers the address, and opens that server. Later launches reconnect on their own.
+The first screen asks for the server address and port (default **6790**). The app checks `GET /api/status`, remembers the address, and opens the guide shipped in the app. Later launches reconnect on their own.
+
+**View sample guide** opens the same UI with sample channels and no network. Use it for App Review or a quick look without a server.
 
 In the guide, **Settings → Change server** returns to that screen. It is only shown inside this app.
 
-The server is plain HTTP on the local network. Do not expose port `6790` to the internet. The first time you connect, iOS asks for local network permission.
+The server is plain HTTP on the local network. Do not expose port `6790` to the internet. The first time you connect, iOS asks for local network permission. Addresses outside the local network must use HTTPS.
 
 ## Build
 
@@ -20,7 +22,7 @@ From the repo root, with no signing prompts:
 scripts/build-mobile.sh
 ```
 
-That produces:
+That builds the web guide into `mobile/www/guide`, then produces:
 
 - Android debug APK: `mobile/android/app/build/outputs/apk/debug/app-debug.apk`
 - iOS Simulator app, when Xcode is installed
@@ -61,6 +63,8 @@ A push to `dev` that changes this app, or a manual run of `.github/workflows/tes
 
 ## App Review access
 
-The connection screen explains the server requirement and the app's features before connection. A private LAN address and a recording alone do not give a reviewer interactive access to the guide or television controls. The submission includes a demonstration recording; Apple has not confirmed whether additional interactive access is required. Any sample mode must be clearly labeled and available to all users; never detect reviewers or change functionality for review.
+The connection screen explains the server requirement and the app's features before connection. **View sample guide** opens a clearly labeled sample channel guide with no network. Playback stays on the television when connected to a real server.
 
 The iOS upload preparation copies the current `www` assets and Capacitor configuration before archiving. Do not rely on assets left behind by an earlier simulator build.
+
+App Store listing and submit steps: [`docs/APP_STORE.md`](docs/APP_STORE.md).

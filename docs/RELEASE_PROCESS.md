@@ -16,7 +16,7 @@ Use semantic versioning for releases:
 - `MINOR` for new features or significant behavior changes
 - `PATCH` for bug fixes and stability updates
 
-Before a TestFlight upload, bump the marketing version on `dev` in every version source together:
+Before a TestFlight upload, bump the marketing version on `dev` in every version source together (or run `scripts/bump-version.sh X.Y.Z` and verify with `scripts/check-versions.sh --strict`):
 
 - `server/tvmaestro/__version__.py`
 - `web/package.json`
@@ -24,9 +24,9 @@ Before a TestFlight upload, bump the marketing version on `dev` in every version
 - Apple TV `MARKETING_VERSION` in `appletv/TVMaestro.xcodeproj`
 - Companion `version` in `mobile/package.json`, `versionName` and `versionCode` in `mobile/android/app/build.gradle`, and `MARKETING_VERSION` in `mobile/ios/App/App.xcodeproj`
 - `CHANGELOG.md`
-- `appletv/fastlane/metadata/en-US/release_notes.txt` (What’s New)
+- `appletv/fastlane/metadata/en-US/release_notes.txt` and `mobile/fastlane/metadata/en-US/release_notes.txt` (What’s New)
 
-Upload those notes with `bundle exec fastlane metadata` before you submit. The submit lane skips metadata.
+The `submit` lanes upload listing metadata and screenshots along with submitting for review; you can also push metadata separately with `bundle exec fastlane metadata` (or `bundle exec fastlane ios metadata` in `mobile/`).
 
 Bump `versionCode` with each Android release. A repeated code will not install over the previous APK.
 
@@ -34,7 +34,7 @@ Apple build numbers are not committed. TestFlight sets the next build to one hig
 
 ## TestFlight
 
-Pushes to `dev` that change `appletv/**` or `mobile/**` upload the Apple TV app and the iOS companion to TestFlight. You can also run the TestFlight workflow by hand, including companion-only. Version tags do not upload another binary.
+Pushes to `dev` that change `appletv/**`, `mobile/**`, `web/**`, or `scripts/bundle-companion-guide.sh` upload the affected Apple app(s) to TestFlight (Apple TV only when `appletv/**` changes; iOS companion when `mobile/**`, `web/**`, or the guide bundler changes). You can also run the TestFlight workflow by hand, including companion-only. Version tags do not upload another binary.
 
 TestFlight builds expire 90 days after upload.
 
@@ -61,7 +61,7 @@ Run the App Store workflow by hand. It does not build a new binary. Choose the p
 
 The workflow fails if that build is still processing. A metadata rejection can resubmit the same build number. A binary rejection needs a new TestFlight upload, then a submit of that new number.
 
-The iOS companion submit lane refuses to run until `mobile/fastlane/metadata` exists. The first tvOS submission still needs the listing work in [appletv/docs/APP_STORE.md](../appletv/docs/APP_STORE.md).
+Release tags (`vX.Y.Z`) verify that all component versions match the tag via `scripts/check-versions.sh --tag vX.Y.Z`. To prevent tagged releases from falling back to unsigned debug APKs when keystore secrets are missing, set the repository variable `REQUIRE_ANDROID_SIGNING=true`.
 
 Locally, from `appletv`:
 

@@ -1,0 +1,7 @@
+TVMaestro is a phone and tablet guide for a TVMaestro server on your home network. Open the app, enter the server address, and browse the same channel lineup and schedule you see in the browser guide.
+
+Use the guide to start and stop playback on a paired television on your network. The phone and tablet do not play the streams. Playback stays on the television apps.
+
+There is no account. The app stores only the server address you enter. It does not collect personal data and has no analytics service.
+
+You can open a sample guide in the app without a server. Connect to your own server when you are ready to control a television.

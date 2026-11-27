@@ -11,7 +11,7 @@ from typing import Optional
 
 import httpx
 
-from .config import ConfigStore, data_dir
+from .config import ConfigStore, atomic_write_text, data_dir
 from .m3u import parse_m3u
 from .models import Channel, Programme
 from .xmltv import parse_xmltv
@@ -53,6 +53,8 @@ class GuideStore:
                 self.programmes = [Programme.model_validate(p) for p in raw.get("programmes", [])]
                 self.xmltv_names = dict(raw.get("xmltv_names") or {})
                 self.epg_updated_at = float(raw.get("updated_at") or 0)
+            if self.channels and self.programmes:
+                self._remap_channel_ids()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Disk cache load failed: %s", exc)
 
@@ -61,7 +63,7 @@ class GuideStore:
             "updated_at": self.channels_updated_at,
             "channels": [c.model_dump() for c in self.channels],
         }
-        self._channels_path().write_text(json.dumps(payload), encoding="utf-8")
+        atomic_write_text(self._channels_path(), json.dumps(payload))
 
     def _save_epg(self) -> None:
         payload = {
@@ -69,7 +71,7 @@ class GuideStore:
             "xmltv_names": self.xmltv_names,
             "programmes": [p.model_dump() for p in self.programmes],
         }
-        self._epg_path().write_text(json.dumps(payload), encoding="utf-8")
+        atomic_write_text(self._epg_path(), json.dumps(payload))
 
     async def start(self) -> None:
         try:
@@ -130,6 +132,8 @@ class GuideStore:
         self.channels = channels
         self.channels_updated_at = time.time()
         self._save_channels()
+        if self.programmes:
+            self._remap_channel_ids()
         self.last_error = None
 
     async def _refresh_epg(self) -> None:
@@ -145,10 +149,10 @@ class GuideStore:
         names, programmes = parse_xmltv(text)
         self.xmltv_names = names
         self.programmes = programmes
+        self._remap_channel_ids()
         self.epg_updated_at = time.time()
         self._save_epg()
         self.last_error = None
-        self._remap_channel_ids()
 
     def _remap_channel_ids(self) -> None:
         """Align programme channel_id with M3U channel ids when possible."""

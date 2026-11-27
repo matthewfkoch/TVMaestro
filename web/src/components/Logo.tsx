@@ -4,5 +4,6 @@ type LogoProps = {
 };
 
 export default function Logo({ title = "TVMaestro", className }: LogoProps) {
-  return <img className={className} src="/logo.png" alt={title} />;
+  const src = `${import.meta.env.BASE_URL}logo.png`.replace(/\/{2,}/g, "/");
+  return <img className={className} src={src} alt={title} />;
 }

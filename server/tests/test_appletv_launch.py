@@ -213,7 +213,7 @@ def test_companion_mute_uses_remote_hid_code():
 
     class Api:
         async def hid_command(self, down: bool, command: object) -> None:
-            presses.append((down, int(getattr(command, "value"))))
+            presses.append((down, int(command.value)))  # type: ignore[attr-defined]
 
     class Remote:
         def __init__(self) -> None:
@@ -240,7 +240,7 @@ def test_companion_volume_uses_remote_keys():
 
     class Api:
         async def hid_command(self, down: bool, command: object) -> None:
-            presses.append((down, int(getattr(command, "value"))))
+            presses.append((down, int(command.value)))  # type: ignore[attr-defined]
 
     class Remote:
         def __init__(self) -> None:

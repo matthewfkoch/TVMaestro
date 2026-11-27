@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -14,6 +15,8 @@ from .guide import GuideStore
 from .models import Layout, SessionCreate, SessionSlot, SessionState
 
 logger = logging.getLogger(__name__)
+
+MAX_STOPPED_SESSIONS = 50
 
 LAYOUT_CAPACITY = {
     Layout.one: 1,
@@ -104,12 +107,16 @@ class SessionManager:
             )
         if capacity > device_max:
             # Clamp layout to what the SoC can handle
-            if device_max == 1:
+            if device_max <= 1:
                 body = body.model_copy(update={"layout": Layout.one, "mode": "single"})
                 capacity = 1
-            elif device_max == 2 and body.layout == Layout.quad:
-                body = body.model_copy(update={"layout": Layout.two_h})
+            elif device_max < 4:
+                clamped = Layout.two_v if body.layout == Layout.two_v else Layout.two_h
+                body = body.model_copy(update={"layout": clamped})
                 capacity = 2
+            else:
+                body = body.model_copy(update={"layout": Layout.quad})
+                capacity = 4
 
         if not body.slots:
             raise ValueError("At least one slot is required")
@@ -150,6 +157,7 @@ class SessionManager:
                 self._sessions[prior.id] = prior
             self._by_device[device.id] = session.id
             self._sessions[session.id] = session
+            self._prune_stopped()
         except Exception as exc:  # noqa: BLE001
             logger.exception("Failed to push session to %s", device.id)
             session.status = "error"
@@ -175,7 +183,75 @@ class SessionManager:
         self._sessions[session_id] = session
         if self._by_device.get(session.device_id) == session_id:
             del self._by_device[session.device_id]
+        self._prune_stopped()
         return session
+
+    def _prune_stopped(self) -> None:
+        stopped = [s for s in self._sessions.values() if s.status == "stopped"]
+        if len(stopped) <= MAX_STOPPED_SESSIONS:
+            return
+        stopped.sort(key=lambda s: s.updated_at)
+        for old in stopped[: len(stopped) - MAX_STOPPED_SESSIONS]:
+            self._sessions.pop(old.id, None)
+
+    async def hydrate_from_devices(self) -> None:
+        """Recover active playback sessions from online devices after a server restart."""
+        targets = [d for d in self.devices.list() if d.online and d.id not in self._by_device]
+        if not targets:
+            return
+
+        async def _check(device) -> None:  # noqa: ANN001
+            try:
+                payload = await client_proxy.get_session(device, timeout=3.0)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Session hydrate skipped for %s: %s", device.id, exc)
+                return
+            if not isinstance(payload, dict):
+                return
+            live = payload.get("session")
+            if not isinstance(live, dict):
+                return
+            raw_slots = live.get("slots")
+            if not isinstance(raw_slots, list):
+                return
+            slots: list[SessionSlot] = []
+            for item in raw_slots:
+                if not isinstance(item, dict):
+                    slots.append(SessionSlot())
+                    continue
+                slots.append(
+                    SessionSlot(
+                        channel_id=item.get("channel_id"),
+                        url=item.get("url"),
+                        title=item.get("title"),
+                        audio=bool(item.get("audio", False)),
+                    )
+                )
+            if not any(_slot_playable(s) for s in slots):
+                return
+            slots = _with_single_audio(slots)
+            try:
+                layout = Layout(live.get("layout", "1"))
+            except ValueError:
+                layout = Layout.one
+            mode = "multiview" if LAYOUT_CAPACITY.get(layout, 1) > 1 else "single"
+            now = time.time()
+            session_id = str(live.get("id") or uuid.uuid4())
+            state = SessionState(
+                id=session_id,
+                device_id=device.id,
+                mode=mode,
+                layout=layout,
+                slots=slots,
+                status="playing",
+                created_at=now,
+                updated_at=now,
+            )
+            if device.id not in self._by_device:
+                self._sessions[state.id] = state
+                self._by_device[device.id] = state.id
+
+        await asyncio.gather(*(_check(d) for d in targets), return_exceptions=True)
 
     async def refresh_audio(self, session_id: str) -> Optional[SessionState]:
         """Read the device's current audible pane so a remote swipe matches the guide."""

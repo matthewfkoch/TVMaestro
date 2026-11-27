@@ -9,7 +9,6 @@
 #   - App Store Connect API key (.p8) from developer.apple.com
 #   - Apple Team ID (10 chars)
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="matthewfkoch/TVMaestro"
 
 if ! command -v gh >/dev/null 2>&1; then
@@ -44,7 +43,7 @@ echo
 read -r -p "Trigger TestFlight workflow now? [Y/n] " TRIGGER
 TRIGGER="${TRIGGER:-Y}"
 if [[ "$TRIGGER" =~ ^[Yy] ]]; then
-  gh workflow run "TestFlight (Apple TV).yml" --repo "$REPO"
+  gh workflow run "testflight.yml" --repo "$REPO"
   echo "Workflow started. Watch: https://github.com/$REPO/actions"
 fi
 

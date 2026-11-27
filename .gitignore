@@ -14,6 +14,7 @@ data/*
 !data/.gitkeep
 node_modules/
 web/dist/
+mobile/www/guide/
 dist/
 server/tvmaestro/web/*
 !server/tvmaestro/web/.gitkeep
@@ -38,6 +39,12 @@ appletv/fastlane/metadata/review_information/first_name.txt
 appletv/fastlane/metadata/review_information/last_name.txt
 appletv/fastlane/metadata/review_information/phone_number.txt
 appletv/fastlane/metadata/review_information/email_address.txt
+mobile/fastlane/metadata/review_information/first_name.txt
+mobile/fastlane/metadata/review_information/last_name.txt
+mobile/fastlane/metadata/review_information/phone_number.txt
+mobile/fastlane/metadata/review_information/email_address.txt
+mobile/fastlane/report.xml
+
 appletv/*.ipa
 appletv/*.dSYM.zip
 *.ipa
@@ -51,6 +58,7 @@ appletv/TVMaestro.xcodeproj/project.xcworkspace/
 appletv/TVMaestro.xcodeproj/xcuserdata/
 *.iml
 .idea/
+.cursor/
 .DS_Store
 *.log
 *.p8

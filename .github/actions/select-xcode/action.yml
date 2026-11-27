@@ -1,0 +1,29 @@
+name: Select Xcode
+description: Select the preferred Xcode installation on macOS runners, falling back to the latest available Xcode.
+inputs:
+  preferred:
+    description: Preferred Xcode path if installed
+    required: false
+    default: /Applications/Xcode_26.3.app
+
+runs:
+  using: composite
+  steps:
+    - name: Select Xcode
+      shell: bash
+      env:
+        PREFERRED_XCODE: ${{ inputs.preferred }}
+      run: |
+        set -euo pipefail
+        if [[ -d "$PREFERRED_XCODE" ]]; then
+          SELECTED="$PREFERRED_XCODE"
+        else
+          SELECTED="$(find /Applications -maxdepth 1 -name 'Xcode_*.app' -type d 2>/dev/null | sort -V | tail -1 || true)"
+          if [[ -z "$SELECTED" && -d /Applications/Xcode.app ]]; then
+            SELECTED="/Applications/Xcode.app"
+          fi
+        fi
+        if [[ -n "${SELECTED:-}" ]]; then
+          sudo xcode-select -s "$SELECTED"
+        fi
+        xcodebuild -version

@@ -13,6 +13,8 @@ on:
     paths:
       - "appletv/**"
       - "mobile/**"
+      - "web/**"
+      - "scripts/bundle-companion-guide.sh"
 
 concurrency:
   group: testflight
@@ -22,9 +24,57 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changed Apple apps
+    runs-on: ubuntu-latest
+    outputs:
+      appletv: ${{ steps.filter.outputs.appletv }}
+      companion: ${{ steps.filter.outputs.companion }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compute affected apps
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COMPANION_ONLY: ${{ inputs.companion_only }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            if [[ "$COMPANION_ONLY" == "true" ]]; then
+              echo "appletv=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "appletv=true" >> "$GITHUB_OUTPUT"
+            fi
+            echo "companion=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ -z "$BEFORE_SHA" || "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            echo "appletv=true" >> "$GITHUB_OUTPUT"
+            echo "companion=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed="$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA")"
+          if grep -qE '^appletv/' <<< "$changed"; then
+            echo "appletv=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "appletv=false" >> "$GITHUB_OUTPUT"
+          fi
+          if grep -qE '^(mobile/|web/|scripts/bundle-companion-guide\.sh$)' <<< "$changed"; then
+            echo "companion=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "companion=false" >> "$GITHUB_OUTPUT"
+          fi
+
   testflight:
     name: Apple TV TestFlight
-    if: github.event_name != 'workflow_dispatch' || inputs.companion_only != true
+    needs: [changes]
+    if: needs.changes.outputs.appletv == 'true'
     runs-on: macos-15
     defaults:
       run:
@@ -32,49 +82,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check TestFlight secrets
+      - name: Set up Fastlane & App Store Connect
         id: asc
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          if [[ -z "$ASC_KEY_ID" || -z "$ASC_ISSUER_ID" || -z "$ASC_PRIVATE_KEY" || -z "$APPLE_TEAM_ID" ]]; then
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::TestFlight secrets are not configured; skipping upload"
-          else
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: ruby/setup-ruby@v1
-        if: steps.asc.outputs.enabled == 'true'
+        uses: ./.github/actions/setup-fastlane-asc
         with:
-          ruby-version: "3.1"
-          bundler-cache: true
-          working-directory: appletv
+          asc-key-id: ${{ secrets.ASC_KEY_ID }}
+          asc-issuer-id: ${{ secrets.ASC_ISSUER_ID }}
+          asc-private-key: ${{ secrets.ASC_PRIVATE_KEY }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          fail-if-missing: "false"
 
-      - name: Install Fastlane
+      - uses: ./.github/actions/select-xcode
         if: steps.asc.outputs.enabled == 'true'
-        run: bundle install
-
-      - name: Configure App Store Connect API key
-        if: steps.asc.outputs.enabled == 'true'
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-        run: |
-          mkdir -p "$HOME/private_keys"
-          KEY_PATH="$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
-          printf '%s' "$ASC_PRIVATE_KEY" > "$KEY_PATH"
-          echo "ASC_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
-
-      - name: Select Xcode
-        if: steps.asc.outputs.enabled == 'true'
-        run: |
-          sudo xcode-select -s /Applications/Xcode_26.3.app
-          xcodebuild -version
 
       - name: Upload to TestFlight
         if: steps.asc.outputs.enabled == 'true'
@@ -87,43 +106,41 @@ jobs:
 
   companion:
     name: Companion TestFlight
+    needs: [changes]
+    if: needs.changes.outputs.companion == 'true'
     runs-on: macos-15
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check TestFlight secrets
+      - name: Set up Fastlane & App Store Connect
         id: asc
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          if [[ -z "$ASC_KEY_ID" || -z "$ASC_ISSUER_ID" || -z "$ASC_PRIVATE_KEY" || -z "$APPLE_TEAM_ID" ]]; then
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::TestFlight secrets are not configured; skipping upload"
-          else
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          fi
+        uses: ./.github/actions/setup-fastlane-asc
+        with:
+          asc-key-id: ${{ secrets.ASC_KEY_ID }}
+          asc-issuer-id: ${{ secrets.ASC_ISSUER_ID }}
+          asc-private-key: ${{ secrets.ASC_PRIVATE_KEY }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          fail-if-missing: "false"
 
-      - name: Select Xcode
+      - uses: ./.github/actions/select-xcode
         if: steps.asc.outputs.enabled == 'true'
-        run: |
-          sudo xcode-select -s /Applications/Xcode_26.3.app
-          xcodebuild -version
 
       - uses: actions/setup-node@v4
         if: steps.asc.outputs.enabled == 'true'
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: |
+            mobile/package-lock.json
+            web/package-lock.json
 
-      - name: Sync iOS web assets
+      - name: Bundle guide and sync iOS assets
         if: steps.asc.outputs.enabled == 'true'
-        working-directory: mobile
         run: |
+          chmod +x scripts/bundle-companion-guide.sh
+          scripts/bundle-companion-guide.sh
+          cd mobile
           npm ci
           npx cap sync ios
 
@@ -133,30 +150,6 @@ jobs:
           chmod +x scripts/build-mobile.sh
           scripts/build-mobile.sh --prepare-ios-only
           xattr -cr mobile/ios mobile/www || true
-
-      - uses: ruby/setup-ruby@v1
-        if: steps.asc.outputs.enabled == 'true'
-        with:
-          ruby-version: "3.1"
-          bundler-cache: true
-          working-directory: appletv
-
-      - name: Install Fastlane
-        if: steps.asc.outputs.enabled == 'true'
-        working-directory: appletv
-        run: bundle install
-
-      - name: Configure App Store Connect API key
-        if: steps.asc.outputs.enabled == 'true'
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-        run: |
-          mkdir -p "$HOME/private_keys"
-          KEY_PATH="$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
-          printf '%s' "$ASC_PRIVATE_KEY" > "$KEY_PATH"
-          echo "ASC_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
       - name: Upload companion to TestFlight
         if: steps.asc.outputs.enabled == 'true'
