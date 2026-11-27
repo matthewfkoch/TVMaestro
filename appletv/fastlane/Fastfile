@@ -46,12 +46,16 @@ platform :tvos do
       xcodeproj: "TVMaestro.xcodeproj"
     )
 
+    # Archive without a signature. Automatic signing on ephemeral CI runners
+    # mints a new Apple Development certificate each run until the account hits
+    # Apple's limit. The App Store export below signs with the API key instead.
     build_app(
       project: "TVMaestro.xcodeproj",
       scheme: "TVMaestro",
       configuration: "Release",
       export_method: "app-store",
       destination: "generic/platform=tvOS",
+      skip_codesigning: true,
       xcargs: signing_xcargs(team_id),
       export_options: {
         method: "app-store",
@@ -82,6 +86,7 @@ platform :tvos do
       configuration: "Release",
       export_method: "app-store",
       destination: "generic/platform=tvOS",
+      skip_codesigning: true,
       xcargs: signing_xcargs(team_id),
       export_options: {
         method: "app-store",
