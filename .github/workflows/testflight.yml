@@ -31,7 +31,7 @@ jobs:
       appletv: ${{ steps.filter.outputs.appletv }}
       companion: ${{ steps.filter.outputs.companion }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Compute affected apps
@@ -80,7 +80,7 @@ jobs:
       run:
         working-directory: appletv
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Fastlane & App Store Connect
         id: asc
@@ -111,7 +111,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Fastlane & App Store Connect
         id: asc
@@ -126,7 +126,7 @@ jobs:
       - uses: ./.github/actions/select-xcode
         if: steps.asc.outputs.enabled == 'true'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.asc.outputs.enabled == 'true'
         with:
           node-version: "22"

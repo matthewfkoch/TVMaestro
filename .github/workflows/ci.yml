@@ -15,7 +15,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Ruff (Python)
         uses: astral-sh/ruff-action@v3
         with:
@@ -30,8 +30,8 @@ jobs:
       run:
         working-directory: server
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -48,8 +48,8 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -61,7 +61,7 @@ jobs:
       - name: Build
         run: npm run build
       - name: Upload web dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: web/dist
@@ -71,10 +71,10 @@ jobs:
     name: Docker image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: server/Dockerfile
@@ -91,12 +91,12 @@ jobs:
       run:
         working-directory: android
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - uses: ./.github/actions/setup-android-sdk
         with:
           platform: "platforms;android-37.0"
@@ -107,7 +107,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
@@ -117,7 +117,7 @@ jobs:
     name: Apple TV
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/select-xcode
       - name: Core unit tests
         run: |
@@ -128,7 +128,7 @@ jobs:
           chmod +x scripts/build-appletv.sh
           scripts/build-appletv.sh
       - name: Upload app bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: appletv-app
           path: appletv/build/Build/Products/**/TVMaestro.app
@@ -138,13 +138,13 @@ jobs:
     name: Companion Android
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
-      - uses: gradle/actions/setup-gradle@v4
-      - uses: actions/setup-node@v4
+      - uses: gradle/actions/setup-gradle@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -170,7 +170,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon testDebugUnitTest assembleDebug
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: companion-android-debug-apk
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
@@ -180,9 +180,9 @@ jobs:
     name: Companion iOS
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/select-xcode
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -214,7 +214,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
       - name: Upload app bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: companion-ios-app
           path: mobile/ios/DerivedData/Build/Products/**/App.app

@@ -14,10 +14,10 @@ prepare_ios_capacitor() {
   # Xcode's Swift package downloader can sit forever on these binary frameworks.
   # Fetch them with curl and point CapApp-SPM at the local package instead.
   local dest="$ROOT/mobile/ios/capacitor-binaries"
-  local version="8.5.3"
+  local version="8.6.2"
   mkdir -p "$dest"
-  download_xcframework "Capacitor" "9316f568444411d362dcb4d1946e7572d4aef5d690c122ff6f1cb8a44a920c9f" "$version" "$dest"
-  download_xcframework "Cordova" "bdcd8eab2d62a077efd76c3c8b9629e65ae7043c1462289a1e55de9be19bbf1f" "$version" "$dest"
+  download_xcframework "Capacitor" "584538bf09d52adb2a86ecabac495c151896d60b28e0cccc286280f2c7ed7e87" "$version" "$dest"
+  download_xcframework "Cordova" "63f4ec1c21340f7caf7df7263618ee262c8bc8a18bb91b9d9716602e6fda3fa3" "$version" "$dest"
   cat > "$dest/Package.swift" <<'EOF'
 // swift-tools-version: 5.9
 import PackageDescription

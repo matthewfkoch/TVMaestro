@@ -51,7 +51,7 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.19.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.appcompat:appcompat:1.8.0")
     implementation("androidx.leanback:leanback:1.0.0")
 
     implementation("androidx.media3:media3-exoplayer:1.11.1")
@@ -59,7 +59,7 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.11.1")
 
     implementation("org.nanohttpd:nanohttpd:2.3.1")
-    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.15.0")
 
     testImplementation("junit:junit:4.13.2")
 }

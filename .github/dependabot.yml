@@ -2,48 +2,92 @@ version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/server"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    groups:
+      python-server:
+        patterns:
+          - "*"
 
   - package-ecosystem: "npm"
     directory: "/web"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    groups:
+      web-deps:
+        patterns:
+          - "*"
 
   - package-ecosystem: "npm"
     directory: "/mobile"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    groups:
+      capacitor-and-mobile:
+        patterns:
+          - "*"
 
   - package-ecosystem: "gradle"
     directory: "/android"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    groups:
+      android-tv:
+        patterns:
+          - "*"
 
   - package-ecosystem: "gradle"
     directory: "/mobile/android"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    ignore:
+      # Capacitor 8 uses AGP 8.x which does not support Gradle 9 yet.
+      - dependency-name: "gradle-wrapper"
+        versions: [">= 9.0.0"]
+    groups:
+      companion-android:
+        patterns:
+          - "*"
 
   - package-ecosystem: "bundler"
     directory: "/appletv"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    groups:
+      fastlane:
+        patterns:
+          - "*"
 
   - package-ecosystem: "docker"
     directory: "/server"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
+    ignore:
+      # Keep Docker Node major aligned with CI (Node 22 LTS).
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
