@@ -59,7 +59,7 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.11.1")
 
     implementation("org.nanohttpd:nanohttpd:2.3.1")
-    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.15.0")
 
     testImplementation("junit:junit:4.13.2")
 }
